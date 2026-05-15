@@ -1,0 +1,31 @@
+{
+  "name": "tradebot",
+  "version": "1.0.0",
+  "description": "AI-powered trading bot that predicts trends and learns from information",
+  "main": "dist/bot.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/bot.js",
+    "dev": "tsc && node dist/bot.js",
+    "cli": "node dist/cli.js"
+  },
+  "keywords": [
+    "trading",
+    "bot",
+    "ai",
+    "crypto",
+    "stocks"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.96.0",
+    "axios": "^1.16.1",
+    "dotenv": "^17.4.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^6.0.3"
+  },
+  "devDependencies": {
+    "@types/node": "^25.8.0"
+  }
+}
