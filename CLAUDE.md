@@ -100,9 +100,21 @@ src/
 │   ├── index.ts              # Configuration management (env vars)
 │   └── persona.ts            # Trading persona (institutional-grade AI)
 ├── services/
+│   ├── agents/               # Multi-agent evaluation system
+│   │   ├── index.ts          # Agent exports
+│   │   ├── types.ts          # Agent types and interfaces
+│   │   ├── trendAgent.ts    # Multi-timeframe trend analysis
+│   │   ├── volatilityAgent.ts # ATR and volatility regime analysis
+│   │   ├── liquidityAgent.ts # Spread and order book quality
+│   │   ├── momentumAgent.ts # RSI/MACD and momentum analysis
+│   │   ├── riskAgent.ts     # Position sizing and risk validation
+│   │   ├── historicalEdgeAgent.ts # Pattern matching and edge analysis
+│   │   ├── executionAgent.ts # Entry precision and execution quality
+│   │   └── ceoAgent.ts       # CEO oversight and final approval
 │   ├── aiAnalysis.ts         # AI integration (MiniMax/Anthropic) with RAG
 │   ├── database.ts           # SQLite for structured trade records
 │   ├── embeddings.ts         # MiniMax embeddings for vectorization
+│   ├── enhancedTradeEvaluator.ts # Multi-agent trade quality scoring
 │   ├── marketData.ts         # Market data fetching (Yahoo Finance)
 │   ├── memory.ts             # Persistent memory & learning system
 │   ├── ragContext.ts         # RAG context builder from Qdrant/SQLite
@@ -501,6 +513,17 @@ npm run cli <command>
 - Multi-factor confidence scoring with minimum threshold of 65
 - AI response now includes RISK_ASSESSMENT and MARKET_REGIME fields
 - Config includes persona settings: minConfidenceScore (65), maxAccountRiskPercent (1), maxDailyDrawdownPercent (5), minRiskToReward (2)
+
+### 2026-05-16: Institutional Trading Intelligence Framework
+- Created multi-agent evaluation system with 7 sub-agents plus CEO oversight
+- Sub-agents: TrendAgent, VolatilityAgent, LiquidityAgent, MomentumAgent, RiskAgent, HistoricalEdgeAgent, ExecutionAgent
+- CEO Agent (`src/services/agents/ceoAgent.ts`) - Final authority for trade approval/rejection
+- Enhanced Trade Evaluator (`src/services/enhancedTradeEvaluator.ts`) - Integrates all agents with weighted scoring
+- Trade quality scoring: 20% trend, 15% regime, 15% risk, 10% liquidity, 10% momentum, 10% historical edge, 10% execution, 5% volatility, 5% discipline
+- Score classifications: 90-100 (Institutional Grade), 80-89 (High Quality), 70-79 (Moderate), 60-69 (Weak), below 60 (Low Quality/Reject)
+- CEO oversight evaluates: strategic quality, risk integrity, execution precision, institutional discipline, long-term sustainability
+- CEO can override and reject trades based on hard-coded rules
+- Enhanced persona with complete system philosophy, good/bad trade criteria, behavioral rules, trade execution sequence
 
 ---
 
