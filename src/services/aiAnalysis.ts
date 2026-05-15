@@ -2,15 +2,21 @@ import axios from 'axios';
 import { AIAnalysisRequest, AIAnalysisResponse } from '../types';
 import { logger } from '../utils/logger';
 import { config } from '../config';
+import { ragContextBuilder } from './ragContext';
 
 const SYSTEM_PROMPT = `You are an expert trading AI agent. Your role is to analyze market data, user-provided information, and historical context to make informed trading recommendations.
 
 You must:
 1. Consider current market conditions and trends
 2. Take into account any user-provided information (news, reports, tips)
-3. Learn from past trading outcomes stored in memory
+3. Learn from past trading outcomes stored in memory - pay special attention to historical patterns
 4. Apply risk management principles
 5. Provide clear, confidence-weighted recommendations
+
+IMPORTANT: Use the historical trade learning context (RAG) provided to inform your decision.
+- Prioritize trades that match patterns of successful trades
+- Avoid trades that exhibit characteristics of unsuccessful trades
+- Consider learned parameters (trend alignment, volatility, momentum, risk/reward ratios) from past trades
 
 For each analysis, respond with:
 - recommendation: "buy", "sell", or "hold"
@@ -31,7 +37,7 @@ TAKE_PROFIT: (optional) price`;
 export class AIAnalysisService {
   async analyze(request: AIAnalysisRequest): Promise<AIAnalysisResponse> {
     try {
-      const prompt = this.buildAnalysisPrompt(request);
+      const prompt = await this.buildAnalysisPrompt(request);
 
       if (config.aiProvider === 'minimax') {
         return await this.analyzeWithMiniMax(prompt);
@@ -102,36 +108,40 @@ export class AIAnalysisService {
     }
   }
 
-  private buildAnalysisPrompt(request: AIAnalysisRequest): string {
+  private async buildAnalysisPrompt(request: AIAnalysisRequest): Promise<string> {
     const { marketData, portfolioState, recentTrades, userInfos, memoryContext } = request;
 
-    let prompt = `Analyze the following market data:\n`;
+    const ragContext = await ragContextBuilder.buildContext(marketData[0]?.symbol || 'UNKNOWN');
+    const ragContextText = ragContextBuilder.formatContextForAI(ragContext);
+
+    let prompt = ragContextText;
+    prompt += `\n\n=== CURRENT MARKET DATA ===\n`;
     marketData.forEach(md => {
       prompt += `- ${md.symbol}: $${md.price} (volume: ${md.volume || 'N/A'})\n`;
     });
 
-    prompt += `\nPortfolio State:\n`;
+    prompt += `\n=== PORTFOLIO STATE ===\n`;
     prompt += `- Cash: $${portfolioState.cash}\n`;
     prompt += `- Total Value: $${portfolioState.totalValue}\n`;
     prompt += `- Daily P&L: $${portfolioState.dailyPnL}\n`;
     prompt += `- Positions: ${Array.from(portfolioState.positions.entries()).map(([s, q]) => `${s}: ${q}`).join(', ') || 'none'}\n`;
 
     if (userInfos.length > 0) {
-      prompt += `\nUser-Provided Information:\n`;
+      prompt += `\n=== USER-PROVIDED INFORMATION ===\n`;
       userInfos.forEach(ui => {
         prompt += `- [${new Date(ui.timestamp).toISOString()}] ${ui.content}\n`;
       });
     }
 
     if (memoryContext.length > 0) {
-      prompt += `\nRecent Context (from memory):\n`;
+      prompt += `\n=== RECENT MEMORY ===\n`;
       memoryContext.slice(-5).forEach(mc => {
         prompt += `- [${mc.type}] ${mc.content}\n`;
       });
     }
 
     if (recentTrades.length > 0) {
-      prompt += `\nRecent Trades:\n`;
+      prompt += `\n=== RECENT TRADES ===\n`;
       recentTrades.slice(-5).forEach(t => {
         prompt += `- ${t.side.toUpperCase()} ${t.quantity} ${t.symbol} @ $${t.price} (${t.status})\n`;
       });

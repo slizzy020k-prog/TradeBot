@@ -14,6 +14,10 @@ export interface Config {
   maxPositionSize: number;
   maxDailyLoss: number;
   dataDir: string;
+  qdrantHost: string;
+  qdrantPort: number;
+  qdrantCollection: string;
+  qualityThreshold: number;
 }
 
 export function loadConfig(): Config {
@@ -28,6 +32,10 @@ export function loadConfig(): Config {
     maxPositionSize: parseFloat(process.env.MAX_POSITION_SIZE || '1000'),
     maxDailyLoss: parseFloat(process.env.MAX_DAILY_LOSS || '200'),
     dataDir: process.env.DATA_DIR || path.join(process.cwd(), 'data'),
+    qdrantHost: process.env.QDRANT_HOST || 'localhost',
+    qdrantPort: parseInt(process.env.QDRANT_PORT || '6333', 10),
+    qdrantCollection: process.env.QDRANT_COLLECTION || 'tradebot_trades',
+    qualityThreshold: parseFloat(process.env.QUALITY_THRESHOLD || '65'),
   };
 }
 

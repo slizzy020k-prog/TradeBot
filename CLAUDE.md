@@ -42,6 +42,39 @@ npm run cli help
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
+│                    Multi-Tier RAG System                     │
+├─────────────────────────────────────────────────────────────┤
+│  ┌──────────────────────────────────────────────────────┐  │
+│  │              Trade Quality Evaluation Layer           │  │
+│  │  - Risk-adjusted performance scoring                  │  │
+│  │  - Trend alignment, volatility, liquidity scoring     │  │
+│  │  - Expected value calculation                         │  │
+│  │  - Strategy adherence evaluation                      │  │
+│  └──────────────────────────────────────────────────────┘  │
+│           │                           │                     │
+│           ▼                           ▼                     │
+│  ┌─────────────────┐       ┌─────────────────────────────┐  │
+│  │   SQLite        │       │       Qdrant               │  │
+│  │   (Structured)  │       │       (Vectors)            │  │
+│  │                 │       │                            │  │
+│  │ - Trades        │       │ - Trade summaries          │  │
+│  │ - Parameters    │       │ - Semantic search          │  │
+│  │ - Quality scores│       │ - Similar trade recall      │  │
+│  │ - Outcomes      │       │ - Pattern matching          │  │
+│  └─────────────────┘       └─────────────────────────────┘  │
+│           │                           │                     │
+│           └─────────────┬──────────────┘                     │
+│                         ▼                                    │
+│           ┌──────────────────────────────┐                   │
+│           │    AI Context Building        │                   │
+│           │    (Enhanced memoryContext)   │                   │
+│           └──────────────────────────────┘                   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Legacy Services:**
+```
+┌─────────────────────────────────────────────────────────────┐
 │                         TradeBot                            │
 ├─────────────────────────────────────────────────────────────┤
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐  │
@@ -66,12 +99,17 @@ src/
 ├── config/
 │   └── index.ts              # Configuration management (env vars)
 ├── services/
-│   ├── aiAnalysis.ts         # AI integration (MiniMax/Anthropic)
+│   ├── aiAnalysis.ts         # AI integration (MiniMax/Anthropic) with RAG
+│   ├── database.ts           # SQLite for structured trade records
+│   ├── embeddings.ts         # MiniMax embeddings for vectorization
 │   ├── marketData.ts         # Market data fetching (Yahoo Finance)
 │   ├── memory.ts             # Persistent memory & learning system
+│   ├── ragContext.ts         # RAG context builder from Qdrant/SQLite
 │   ├── riskManagement.ts     # Position sizing & loss limits
+│   ├── tradeEvaluator.ts     # AI-based trade quality scoring
 │   ├── tradingExecutor.ts    # Trade execution (Alpaca API)
-│   └── userInfoProcessor.ts  # User info ingestion & relevance scoring
+│   ├── userInfoProcessor.ts  # User info ingestion & relevance scoring
+│   └── vectorStore.ts        # Qdrant vector store integration
 ├── types/
 │   └── index.ts              # TypeScript interfaces
 └── utils/
@@ -82,6 +120,77 @@ src/
 
 ## Services
 
+### Database Service (`src/services/database.ts`)
+
+**Purpose:** SQLite-based structured storage for trade records, parameters, and learning logs.
+
+**Schema:**
+- `trades` - Trade records with quality scores, evaluations, and outcomes
+- `trade_parameters` - Detailed scoring breakdown per trade
+- `learning_log` - AI-generated learnings from trade analysis
+
+**Key Methods:**
+- `insertTrade(trade, parameters)` - Store trade with parameters
+- `updateTradeEvaluation(tradeId, evaluation)` - Attach quality score
+- `getGoodTrades(symbol, limit)` - Get top-rated trades (quality >= 65)
+- `getBadTrades(symbol, limit)` - Get poorly-rated trades (quality < 65)
+- `getAllTradesWithOutcome(limit)` - Get trades with completed evaluations
+
+### Embeddings Service (`src/services/embeddings.ts`)
+
+**Purpose:** Generates vector embeddings using MiniMax API for trade similarity search.
+
+**Implementation:** Uses MiniMax `emb-01` model via `https://api.minimaxi.com/v1/embeddings`
+
+**Key Methods:**
+- `getEmbedding(text)` - Get vector for any text
+- `getTradeSummaryEmbedding(trade, evaluation)` - Create embedding from trade summary
+- `createTradeSummaryText(trade, evaluation)` - Formats trade as searchable text
+
+### Vector Store Service (`src/services/vectorStore.ts`)
+
+**Purpose:** Qdrant-based semantic search for finding similar past trades.
+
+**Implementation:** Uses local Qdrant service (default `localhost:6333`)
+
+**Key Methods:**
+- `upsertTrade(tradeId, payload)` - Store trade vector with payload
+- `searchSimilar(symbol, limit)` - Find similar trades by symbol
+- `searchByQuality(good, symbol, limit)` - Find good or bad trades by quality
+
+### Trade Evaluator Service (`src/services/tradeEvaluator.ts`)
+
+**Purpose:** AI-based trade quality evaluation using weighted scoring factors.
+
+**Scoring Factors (weighted):**
+- `trendAlignment` (15%) - Does trade follow established trend?
+- `volatilitySuitability` (15%) - Did volatility conditions match strategy?
+- `liquidityQuality` (15%) - Was liquidity sufficient for position size?
+- `momentumConfirmation` (15%) - Were momentum signals strong?
+- `executionEfficiency` (10%) - How well did execution price compare to expected?
+- `marketConditionCompatibility` (15%) - Did market regime suit this trade type?
+- `riskToReward` (10%) - Risk/reward ratio
+- `riskScore` (5%) - Overall risk assessment
+
+**Output:**
+- `qualityScore` (0-100) - Weighted composite
+- `isGoodTrade` (boolean) - Based on threshold (default >= 65)
+
+### RAG Context Builder (`src/services/ragContext.ts`)
+
+**Purpose:** Builds enhanced context for AI by querying both SQLite and Qdrant.
+
+**Key Methods:**
+- `buildContext(symbol)` - Retrieves good trades, bad trades, similar trades, learned parameters
+- `formatContextForAI(ragContext)` - Formats as prompt section for AI
+
+**Output includes:**
+- Good trades with scoring breakdown
+- Bad trades with failure analysis
+- Similar trades from vector search
+- Learned parameters from historical analysis
+- Summary statistics (total good/bad trades, average quality)
+
 ### AI Analysis Service (`src/services/aiAnalysis.ts`)
 
 **Purpose:** Makes trading recommendations based on market data, portfolio state, user info, and historical context.
@@ -90,10 +199,15 @@ src/
 - `minimax` (default) - Uses MiniMax-M2.7 model via `https://api.minimaxi.com/v1/chat/completions`
 - `anthropic` - Uses Claude 3.5 Sonnet via `@anthropic-ai/sdk`
 
+**RAG Integration:** Before each analysis, the service:
+1. Builds RAG context from SQLite (good/bad trades) and Qdrant (similar trades)
+2. Includes learned parameters in the prompt
+3. Asks AI to prioritize trades matching successful patterns and avoid unsuccessful patterns
+
 **System Prompt:** Configured to act as an expert trading agent that considers:
 1. Current market conditions and trends
 2. User-provided information (news, tips, reports)
-3. Past trading outcomes (what worked, what didn't)
+3. Past trading outcomes (what worked, what didn't) - via RAG
 4. Risk management principles
 
 **Response Format:** AI must respond with:
@@ -200,6 +314,14 @@ MAX_DAILY_LOSS=200       # Stop if daily loss exceeds this
 
 # Data
 DATA_DIR=./data
+
+# Qdrant Vector Store (local service)
+QDRANT_HOST=localhost
+QDRANT_PORT=6333
+QDRANT_COLLECTION=tradebot_trades
+
+# Trade Quality Evaluation
+QUALITY_THRESHOLD=65   # Score >= this = good trade
 ```
 
 ---
@@ -265,6 +387,33 @@ interface Trade {
   price: number;
   timestamp: number;
   status: 'pending' | 'filled' | 'cancelled' | 'rejected';
+  parameters?: TradeParameters;
+}
+
+interface TradeParameters {
+  riskScore?: number;
+  riskToReward?: number;
+  trendAlignment?: number;
+  volatilityScore?: number;
+  liquidityScore?: number;
+  momentumConfirmation?: number;
+  executionEfficiency?: number;
+  marketConditionScore?: number;
+  positionSize?: number;
+  stopLoss?: number;
+  takeProfit?: number;
+  stopLossPct?: number;
+  takeProfitPct?: number;
+  holdingPeriod?: number;
+  drawdown?: number;
+  profitLoss?: number;
+}
+
+interface TradeEvaluation {
+  qualityScore: number;
+  isGoodTrade: boolean;
+  evaluationDetails: TradeParameters;
+  profitLoss?: number;
 }
 
 interface AIAnalysisResponse {
@@ -317,6 +466,25 @@ npm run cli <command>
 - Configurable via `AI_PROVIDER` env var (values: `minimax` or `anthropic`)
 - Added `miniMaxApiKey` to config system
 
+### 2026-05-15: Multi-Tier RAG System
+- Added SQLite database service (`src/services/database.ts`) for structured trade records
+- Added MiniMax embeddings service (`src/services/embeddings.ts`) for vectorization
+- Added Qdrant vector store service (`src/services/vectorStore.ts`) for semantic search
+- Added trade evaluator service (`src/services/tradeEvaluator.ts`) for AI-based quality scoring
+- Added RAG context builder (`src/services/ragContext.ts`) for enhanced AI context
+- Trade quality evaluation based on 8 weighted factors: trend alignment (15%), volatility suitability (15%), liquidity quality (15%), momentum confirmation (15%), execution efficiency (10%), market condition compatibility (15%), risk/reward ratio (10%), risk score (5%)
+- Quality threshold of 65 - trades >= 65 are marked as "good", below are "bad"
+- AI analysis now uses RAG context to recall similar trades and learned parameters
+- Added Qdrant configuration (QDRANT_HOST, QDRANT_PORT, QDRANT_COLLECTION)
+- Added QUALITY_THRESHOLD config for trade classification
+
+### 2026-05-15: Documentation Update
+- Updated CLAUDE.md with complete RAG system documentation
+- Added architecture diagrams for both legacy services and new RAG system
+- Documented all new services: database, embeddings, vectorStore, tradeEvaluator, ragContext
+- Updated project structure to include new service files
+- Added RAG-related configuration options to documentation
+
 ---
 
 ## Notes for AI Agents
@@ -329,11 +497,21 @@ When making changes to this codebase:
 
 3. **Risk Management** - Never remove the daily loss limit check. This is a critical safety feature.
 
-4. **TypeScript** - Always run `npx tsc` before committing to verify no type errors.
+4. **RAG System** - The multi-tier RAG system uses SQLite and Qdrant. When modifying:
+   - `database.ts` - SQLite operations for structured trade data
+   - `vectorStore.ts` - Qdrant operations for semantic search
+   - `ragContext.ts` - Builds AI context from both stores
+   - Always run `npx tsc` before committing to verify no type errors
 
-5. **Environment** - Never commit `.env` files with real API keys. Use `.env.example` as template.
+5. **Trade Evaluation** - Trade quality scoring uses 8 weighted factors. The `tradeEvaluator.ts` service should be updated if the scoring model changes. Quality threshold (default 65) is configurable via `QUALITY_THRESHOLD`.
 
-6. **Testing** - Always test with `TRADING_MODE=paper` before considering live trading.
+6. **TypeScript** - Always run `npx tsc` before committing to verify no type errors.
+
+7. **Environment** - Never commit `.env` files with real API keys. Use `.env.example` as template.
+
+8. **Testing** - Always test with `TRADING_MODE=paper` before considering live trading.
+
+9. **Qdrant** - Requires local Qdrant service running on `QDRANT_HOST:QDRANT_PORT`. Vector store is optional but enables semantic trade similarity search.
 
 ---
 

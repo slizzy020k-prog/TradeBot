@@ -1,3 +1,29 @@
+export interface TradeParameters {
+  riskScore?: number;
+  riskToReward?: number;
+  trendAlignment?: number;
+  volatilityScore?: number;
+  liquidityScore?: number;
+  momentumConfirmation?: number;
+  executionEfficiency?: number;
+  marketConditionScore?: number;
+  positionSize?: number;
+  stopLoss?: number;
+  takeProfit?: number;
+  stopLossPct?: number;
+  takeProfitPct?: number;
+  holdingPeriod?: number;
+  drawdown?: number;
+  profitLoss?: number;
+}
+
+export interface TradeEvaluation {
+  qualityScore: number;
+  isGoodTrade: boolean;
+  evaluationDetails: TradeParameters;
+  profitLoss?: number;
+}
+
 export interface MarketData {
   symbol: string;
   price: number;
@@ -18,6 +44,7 @@ export interface Trade {
   timestamp: number;
   status: 'pending' | 'filled' | 'cancelled' | 'rejected';
   aiRecommendation?: string;
+  parameters?: TradeParameters;
 }
 
 export interface TradeOutcome {
