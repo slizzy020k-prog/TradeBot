@@ -107,6 +107,8 @@ export interface AIAnalysisResponse {
   suggestedQuantity?: number;
   stopLoss?: number;
   takeProfit?: number;
+  riskAssessment?: 'low' | 'medium' | 'high';
+  marketRegime?: string;
 }
 
 export type TradingMode = 'paper' | 'live';

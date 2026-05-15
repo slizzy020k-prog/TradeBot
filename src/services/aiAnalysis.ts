@@ -3,36 +3,7 @@ import { AIAnalysisRequest, AIAnalysisResponse } from '../types';
 import { logger } from '../utils/logger';
 import { config } from '../config';
 import { ragContextBuilder } from './ragContext';
-
-const SYSTEM_PROMPT = `You are an expert trading AI agent. Your role is to analyze market data, user-provided information, and historical context to make informed trading recommendations.
-
-You must:
-1. Consider current market conditions and trends
-2. Take into account any user-provided information (news, reports, tips)
-3. Learn from past trading outcomes stored in memory - pay special attention to historical patterns
-4. Apply risk management principles
-5. Provide clear, confidence-weighted recommendations
-
-IMPORTANT: Use the historical trade learning context (RAG) provided to inform your decision.
-- Prioritize trades that match patterns of successful trades
-- Avoid trades that exhibit characteristics of unsuccessful trades
-- Consider learned parameters (trend alignment, volatility, momentum, risk/reward ratios) from past trades
-
-For each analysis, respond with:
-- recommendation: "buy", "sell", or "hold"
-- confidence: 0-100 scale
-- reasoning: explanation of your decision
-- (optional) suggestedQuantity, stopLoss, takeProfit
-
-Be careful and conservative when confidence is low. Never recommend a trade that contradicts strong market trends without compelling evidence.
-
-IMPORTANT: Respond using this exact format:
-RECOMMENDATION: buy/sell/hold
-CONFIDENCE: 0-100
-REASONING: your explanation
-QUANTITY: (optional) number
-STOP_LOSS: (optional) price
-TAKE_PROFIT: (optional) price`;
+import { TRADING_PERSONA, PERSONA_CONFIG } from '../config/persona';
 
 export class AIAnalysisService {
   async analyze(request: AIAnalysisRequest): Promise<AIAnalysisResponse> {
@@ -61,7 +32,7 @@ export class AIAnalysisService {
         {
           model: 'MiniMax-M2.7',
           messages: [
-            { role: 'system', content: SYSTEM_PROMPT },
+            { role: 'system', content: TRADING_PERSONA },
             { role: 'user', content: prompt },
           ],
           temperature: 0.7,
@@ -95,7 +66,7 @@ export class AIAnalysisService {
       const response = await client.messages.create({
         model: 'claude-3-5-sonnet-20241022',
         max_tokens: 1024,
-        system: SYSTEM_PROMPT,
+        system: TRADING_PERSONA,
         messages: [{ role: 'user', content: prompt }],
       });
 
@@ -166,6 +137,8 @@ TAKE_PROFIT: (optional) price`;
     let suggestedQuantity: number | undefined;
     let stopLoss: number | undefined;
     let takeProfit: number | undefined;
+    let riskAssessment: 'low' | 'medium' | 'high' | undefined;
+    let marketRegime: string | undefined;
 
     for (const line of lines) {
       const [key, ...valueParts] = line.split(':');
@@ -189,10 +162,27 @@ TAKE_PROFIT: (optional) price`;
       } else if (key.toUpperCase().includes('TAKE_PROFIT')) {
         const num = parseFloat(value);
         if (!isNaN(num)) takeProfit = num;
+      } else if (key.toUpperCase().includes('RISK_ASSESSMENT')) {
+        if (value.includes('low')) riskAssessment = 'low';
+        else if (value.includes('high')) riskAssessment = 'high';
+        else if (value.includes('medium')) riskAssessment = 'medium';
+      } else if (key.toUpperCase().includes('MARKET_REGIME')) {
+        marketRegime = valueParts.join(':').trim();
       }
     }
 
-    return { recommendation, confidence, reasoning, suggestedQuantity, stopLoss, takeProfit };
+    logger.info(`AI Response: ${recommendation.toUpperCase()} confidence=${confidence} risk=${riskAssessment || 'N/A'} regime=${marketRegime || 'N/A'}`);
+
+    return {
+      recommendation,
+      confidence,
+      reasoning,
+      suggestedQuantity,
+      stopLoss,
+      takeProfit,
+      riskAssessment,
+      marketRegime,
+    };
   }
 }
 

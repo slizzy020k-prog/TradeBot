@@ -97,7 +97,8 @@ src/
 ├── bot.ts                    # Main trading loop orchestrator
 ├── cli.ts                    # CLI interface for controlling the bot
 ├── config/
-│   └── index.ts              # Configuration management (env vars)
+│   ├── index.ts              # Configuration management (env vars)
+│   └── persona.ts            # Trading persona (institutional-grade AI)
 ├── services/
 │   ├── aiAnalysis.ts         # AI integration (MiniMax/Anthropic) with RAG
 │   ├── database.ts           # SQLite for structured trade records
@@ -195,6 +196,14 @@ src/
 
 **Purpose:** Makes trading recommendations based on market data, portfolio state, user info, and historical context.
 
+**Trading Persona:** Uses institutional-grade trading persona (`src/config/persona.ts`) that models a 30+ year veteran trader with:
+- Capital preservation focus
+- Probabilistic thinking (no trade is certain)
+- Hard-coded risk controls (1% max account risk, 5% max daily drawdown, mandatory stop-loss, 1:2 min R/R)
+- Emotion avoidance (no FOMO, greed, revenge trading, impulse execution)
+- Multi-factor confidence scoring (8 weighted factors)
+- Market regime classification (trending, ranging, breakout, reversal, accumulation, distribution, uncertain)
+
 **AI Providers:**
 - `minimax` (default) - Uses MiniMax-M2.7 model via `https://api.minimaxi.com/v1/chat/completions`
 - `anthropic` - Uses Claude 3.5 Sonnet via `@anthropic-ai/sdk`
@@ -204,12 +213,6 @@ src/
 2. Includes learned parameters in the prompt
 3. Asks AI to prioritize trades matching successful patterns and avoid unsuccessful patterns
 
-**System Prompt:** Configured to act as an expert trading agent that considers:
-1. Current market conditions and trends
-2. User-provided information (news, tips, reports)
-3. Past trading outcomes (what worked, what didn't) - via RAG
-4. Risk management principles
-
 **Response Format:** AI must respond with:
 ```
 RECOMMENDATION: buy/sell/hold
@@ -218,6 +221,8 @@ REASONING: explanation
 QUANTITY: (optional) number of shares
 STOP_LOSS: (optional) price
 TAKE_PROFIT: (optional) price
+RISK_ASSESSMENT: low/medium/high
+MARKET_REGIME: trending/ranging/breakout/reversal/accumulation/distribution/uncertain
 ```
 
 ### Market Data Service (`src/services/marketData.ts`)
@@ -423,6 +428,8 @@ interface AIAnalysisResponse {
   suggestedQuantity?: number;
   stopLoss?: number;
   takeProfit?: number;
+  riskAssessment?: 'low' | 'medium' | 'high';
+  marketRegime?: string;
 }
 
 interface MemoryEntry {
@@ -484,6 +491,16 @@ npm run cli <command>
 - Documented all new services: database, embeddings, vectorStore, tradeEvaluator, ragContext
 - Updated project structure to include new service files
 - Added RAG-related configuration options to documentation
+
+### 2026-05-16: Trading Persona
+- Created institutional-grade trading persona (`src/config/persona.ts`)
+- Persona models a 30+ year veteran trader with capital preservation focus
+- Hard-coded risk controls: 1% max account risk, 5% max daily drawdown, mandatory stop-loss, 1:2 min risk/reward
+- Emotion rules: no FOMO, greed, revenge trading, or impulse execution
+- Market regime classification: trending, ranging, breakout, reversal, accumulation, distribution, uncertain
+- Multi-factor confidence scoring with minimum threshold of 65
+- AI response now includes RISK_ASSESSMENT and MARKET_REGIME fields
+- Config includes persona settings: minConfidenceScore (65), maxAccountRiskPercent (1), maxDailyDrawdownPercent (5), minRiskToReward (2)
 
 ---
 
