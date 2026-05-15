@@ -5,6 +5,8 @@ dotenv.config();
 
 export interface Config {
   anthropicApiKey: string;
+  miniMaxApiKey: string;
+  aiProvider: 'anthropic' | 'minimax';
   alpacaApiKey: string;
   alpacaSecretKey: string;
   tradingMode: 'paper' | 'live';
@@ -17,6 +19,8 @@ export interface Config {
 export function loadConfig(): Config {
   return {
     anthropicApiKey: process.env.ANTHROPIC_API_KEY || '',
+    miniMaxApiKey: process.env.MINIMAX_API_KEY || '',
+    aiProvider: (process.env.AI_PROVIDER as 'anthropic' | 'minimax') || 'minimax',
     alpacaApiKey: process.env.ALPACA_API_KEY || '',
     alpacaSecretKey: process.env.ALPACA_SECRET_KEY || '',
     tradingMode: (process.env.TRADING_MODE as 'paper' | 'live') || 'paper',

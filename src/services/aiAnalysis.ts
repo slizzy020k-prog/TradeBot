@@ -1,5 +1,5 @@
-import Anthropic from '@anthropic-ai/sdk';
-import { AIAnalysisRequest, AIAnalysisResponse, MarketData, Trade, MemoryEntry, UserInfo, PortfolioState } from '../types';
+import axios from 'axios';
+import { AIAnalysisRequest, AIAnalysisResponse } from '../types';
 import { logger } from '../utils/logger';
 import { config } from '../config';
 
@@ -18,25 +18,75 @@ For each analysis, respond with:
 - reasoning: explanation of your decision
 - (optional) suggestedQuantity, stopLoss, takeProfit
 
-Be careful and conservative when confidence is low. Never recommend a trade that contradicts strong market trends without compelling evidence.`;
+Be careful and conservative when confidence is low. Never recommend a trade that contradicts strong market trends without compelling evidence.
+
+IMPORTANT: Respond using this exact format:
+RECOMMENDATION: buy/sell/hold
+CONFIDENCE: 0-100
+REASONING: your explanation
+QUANTITY: (optional) number
+STOP_LOSS: (optional) price
+TAKE_PROFIT: (optional) price`;
 
 export class AIAnalysisService {
-  private client: Anthropic | null = null;
-
-  private getClient(): Anthropic {
-    if (!this.client) {
-      if (!config.anthropicApiKey) {
-        throw new Error('ANTHROPIC_API_KEY not configured');
-      }
-      this.client = new Anthropic({ apiKey: config.anthropicApiKey });
-    }
-    return this.client;
-  }
-
   async analyze(request: AIAnalysisRequest): Promise<AIAnalysisResponse> {
     try {
       const prompt = this.buildAnalysisPrompt(request);
-      const response = await this.getClient().messages.create({
+
+      if (config.aiProvider === 'minimax') {
+        return await this.analyzeWithMiniMax(prompt);
+      } else {
+        return await this.analyzeWithAnthropic(prompt);
+      }
+    } catch (error) {
+      logger.error('AI analysis failed:', error);
+      throw error;
+    }
+  }
+
+  private async analyzeWithMiniMax(prompt: string): Promise<AIAnalysisResponse> {
+    if (!config.miniMaxApiKey) {
+      throw new Error('MINIMAX_API_KEY not configured');
+    }
+
+    try {
+      const response = await axios.post(
+        'https://api.minimaxi.com/v1/chat/completions',
+        {
+          model: 'MiniMax-M2.7',
+          messages: [
+            { role: 'system', content: SYSTEM_PROMPT },
+            { role: 'user', content: prompt },
+          ],
+          temperature: 0.7,
+          max_completion_tokens: 1024,
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${config.miniMaxApiKey}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      const text = response.data.choices[0].message.content;
+      return this.parseAIResponse(text);
+    } catch (error: any) {
+      logger.error('MiniMax API error:', error.response?.data || error.message);
+      throw error;
+    }
+  }
+
+  private async analyzeWithAnthropic(prompt: string): Promise<AIAnalysisResponse> {
+    if (!config.anthropicApiKey) {
+      throw new Error('ANTHROPIC_API_KEY not configured');
+    }
+
+    try {
+      const Anthropic = (await import('@anthropic-ai/sdk')).default;
+      const client = new Anthropic({ apiKey: config.anthropicApiKey });
+
+      const response = await client.messages.create({
         model: 'claude-3-5-sonnet-20241022',
         max_tokens: 1024,
         system: SYSTEM_PROMPT,
@@ -47,7 +97,7 @@ export class AIAnalysisService {
       const text = 'text' in contentBlock ? contentBlock.text : '';
       return this.parseAIResponse(text);
     } catch (error) {
-      logger.error('AI analysis failed:', error);
+      logger.error('Anthropic API error:', error);
       throw error;
     }
   }
