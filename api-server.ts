@@ -97,7 +97,7 @@ app.get('/api/orders', async (req, res) => {
 app.get('/api/memory', (req, res) => {
   try {
     const { type, limit } = req.query;
-    const entries = memoryService.getRecent(type as string, Number(limit) || 50);
+    const entries = memoryService.getRecent(type as 'trade' | 'analysis' | 'user_info' | 'market_event' | undefined, Number(limit) || 50);
     res.json(entries);
   } catch (error) {
     logger.error('Memory error:', error);
@@ -168,7 +168,7 @@ app.post('/api/analyze', async (req, res) => {
     const marketData = await marketDataService.getQuotes(symbols);
     const portfolio = portfolioState || await tradingExecutorService.getPortfolioState();
     const recentTrades = memoryService.getRecent('trade', 10).map(m => m.metadata?.trade).filter(Boolean);
-    const userInfos = []; // Could be fetched from userInfoProcessor
+    const userInfos: any[] = []; // Could be fetched from userInfoProcessor
     const memoryContext = memoryService.getContext(20);
 
     const newsContext: Record<string, string> = {};

@@ -587,6 +587,48 @@ npm run cli <command>
 
 **50 Agents Debugged:** 10 news, 8 economic, 8 sentiment, 8 earnings, 8 technical, 8 geopolitical
 
+### 2026-05-16: Institutional AI Trading Platform UI
+**New frontend and API server layer added.**
+
+**New Backend: `api-server.ts`**
+- Express HTTP server on port 3001
+- Socket.io WebSocket server for real-time updates
+- REST endpoints: market data, portfolio, orders, memory, stats, risk, news, analysis
+- Bot control endpoints: start/stop/status
+- WebSocket events: portfolio:update, trade:executed, analysis:complete, bot:status
+
+**New Frontend: `frontend/` (Next.js 16)**
+- Full institutional dark-mode UI with cyber-finance aesthetic
+- 10 dashboard modules:
+  1. MarketOverview - Global indices, sector heatmap, VIX, fear & greed
+  2. TradeIntelligence - AI confidence ring, buy/sell/hold recommendation
+  3. PortfolioPanel - Pie chart, positions, daily P&L
+  4. NewsIntelligence - Sentiment bar, manipulation risk, bullish/bearish factors
+  5. OrderFlow - Volume bars, bid/ask imbalance, liquidity zones
+  6. RiskCommandCenter - Daily loss gauge, max position limits
+  7. AgentMonitor - 9 AI agents with neural network visualization
+  8. CEOPanel - CEO oversight scores, trade audit trail
+  9. TradeJournal - Trade history with status badges
+  10. LearningModule - Performance charts, patterns learned, win rate
+- Real-time WebSocket updates
+- Glassmorphism panels with backdrop blur
+
+**Running the UI:**
+```bash
+# Terminal 1 - Backend API
+npm run api
+
+# Terminal 2 - Frontend
+cd frontend && npm run dev
+
+# Open browser
+http://localhost:3000
+```
+
+**New Dependencies Added:**
+Backend: express, socket.io, cors
+Frontend: socket.io-client, recharts, framer-motion, lucide-react, lightweight-charts, @tanstack/react-query
+
 ---
 
 ## Notes for AI Agents
