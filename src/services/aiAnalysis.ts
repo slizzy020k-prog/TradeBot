@@ -81,12 +81,21 @@ export class AIAnalysisService {
   }
 
   private async buildAnalysisPrompt(request: AIAnalysisRequest): Promise<string> {
-    const { marketData, portfolioState, recentTrades, userInfos, memoryContext } = request;
+    const { marketData, portfolioState, recentTrades, userInfos, memoryContext, newsContext } = request;
 
     const ragContext = await ragContextBuilder.buildContext(marketData[0]?.symbol || 'UNKNOWN');
     const ragContextText = ragContextBuilder.formatContextForAI(ragContext);
 
     let prompt = ragContextText;
+
+    // Add news context if available
+    if (newsContext && Object.keys(newsContext).length > 0) {
+      prompt += `\n\n=== MARKET NEWS INTELLIGENCE ===\n`;
+      for (const [symbol, context] of Object.entries(newsContext)) {
+        prompt += `\n--- ${symbol} ---\n${context}\n`;
+      }
+    }
+
     prompt += `\n\n=== CURRENT MARKET DATA ===\n`;
     marketData.forEach(md => {
       prompt += `- ${md.symbol}: $${md.price} (volume: ${md.volume || 'N/A'})\n`;

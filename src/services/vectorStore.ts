@@ -16,6 +16,24 @@ export interface TradeVectorPayload {
   tradeText: string;
 }
 
+export interface NewsVectorPayload {
+  symbol: string;
+  headline: string;
+  content: string;
+  url: string;
+  source: string;
+  classification: 'bullish' | 'bearish' | 'neutral';
+  sentimentScore: number;
+  volatilityScore: number;
+  confidenceScore: number;
+  institutionalImpactScore: number;
+  durationScore: number;
+  manipulationRiskScore: number;
+  keyThemes: string[];
+  relevantSymbols: string[];
+  timestamp: number;
+}
+
 export class VectorStoreService {
   private client: QdrantClient;
   private collectionName: string;
@@ -77,6 +95,48 @@ export class VectorStoreService {
       return id;
     } catch (error) {
       logger.error('Failed to upsert to Qdrant:', error);
+      return null;
+    }
+  }
+
+  async upsertNews(newsId: string, vector: number[], payload: NewsVectorPayload): Promise<string | null> {
+    try {
+      await this.ensureCollection();
+
+      const id = this.hashId(newsId);
+
+      await this.client.upsert(this.collectionName, {
+        wait: true,
+        points: [
+          {
+            id,
+            vector,
+            payload: {
+              newsId,
+              symbol: payload.symbol,
+              headline: payload.headline,
+              content: payload.content,
+              url: payload.url,
+              source: payload.source,
+              classification: payload.classification,
+              sentimentScore: payload.sentimentScore,
+              volatilityScore: payload.volatilityScore,
+              confidenceScore: payload.confidenceScore,
+              institutionalImpactScore: payload.institutionalImpactScore,
+              durationScore: payload.durationScore,
+              manipulationRiskScore: payload.manipulationRiskScore,
+              keyThemes: JSON.stringify(payload.keyThemes),
+              relevantSymbols: JSON.stringify(payload.relevantSymbols),
+              timestamp: payload.timestamp,
+            },
+          },
+        ],
+      });
+
+      logger.debug(`Upserted news ${newsId} to Qdrant`);
+      return id;
+    } catch (error) {
+      logger.error('Failed to upsert news to Qdrant:', error);
       return null;
     }
   }

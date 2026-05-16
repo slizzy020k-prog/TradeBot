@@ -97,6 +97,53 @@ export class DatabaseService {
       CREATE INDEX IF NOT EXISTS idx_trades_symbol ON trades(symbol);
       CREATE INDEX IF NOT EXISTS idx_trades_is_good ON trades(is_good_trade);
       CREATE INDEX IF NOT EXISTS idx_trades_timestamp ON trades(timestamp);
+
+      CREATE TABLE IF NOT EXISTS news_articles (
+        id TEXT PRIMARY KEY,
+        url TEXT NOT NULL,
+        title TEXT NOT NULL,
+        content TEXT,
+        source TEXT NOT NULL,
+        timestamp INTEGER NOT NULL,
+        sentiment_score REAL,
+        volatility_score REAL,
+        confidence_score REAL,
+        institutional_impact_score REAL,
+        duration_score REAL,
+        manipulation_risk_score REAL,
+        classification TEXT,
+        key_themes TEXT,
+        relevant_symbols TEXT,
+        scraped_at INTEGER NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS sentiment_data (
+        id TEXT PRIMARY KEY,
+        source TEXT NOT NULL,
+        symbol TEXT,
+        sentiment TEXT,
+        score REAL,
+        volume INTEGER,
+        timestamp INTEGER NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS economic_releases (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        country TEXT,
+        importance TEXT,
+        release_date INTEGER,
+        previous_value REAL,
+        forecast_value REAL,
+        actual_value REAL,
+        impact_score REAL
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_news_source ON news_articles(source);
+      CREATE INDEX IF NOT EXISTS idx_news_timestamp ON news_articles(timestamp);
+      CREATE INDEX IF NOT EXISTS idx_news_classification ON news_articles(classification);
+      CREATE INDEX IF NOT EXISTS idx_sentiment_source ON sentiment_data(source);
+      CREATE INDEX IF NOT EXISTS idx_sentiment_timestamp ON sentiment_data(timestamp);
     `);
     logger.info('Database initialized');
   }
@@ -184,6 +231,57 @@ export class DatabaseService {
       'SELECT * FROM trades WHERE symbol = ? AND is_good_trade = 0 ORDER BY quality_score ASC LIMIT ?'
     );
     return stmt.all(symbol, limit) as TradeRecord[];
+  }
+
+  insertNewsArticle(article: {
+    headline: string;
+    content: string;
+    url: string;
+    source: string;
+    timestamp: number;
+    scores: {
+      sentimentScore: number;
+      volatilityScore: number;
+      confidenceScore: number;
+      institutionalImpactScore: number;
+      durationScore: number;
+      manipulationRiskScore: number;
+    };
+    classification: 'bullish' | 'bearish' | 'neutral';
+    keyThemes: string[];
+    relevantSymbols: string[];
+  }): void {
+    const stmt = this.db.prepare(`
+      INSERT INTO news_articles (
+        id, url, title, content, source, timestamp,
+        sentiment_score, volatility_score, confidence_score,
+        institutional_impact_score, duration_score, manipulation_risk_score,
+        classification, key_themes, relevant_symbols, scraped_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    const id = `news_${article.timestamp}_${Math.random().toString(36).substr(2, 9)}`;
+
+    stmt.run(
+      id,
+      article.url,
+      article.headline,
+      article.content,
+      article.source,
+      article.timestamp,
+      article.scores.sentimentScore,
+      article.scores.volatilityScore,
+      article.scores.confidenceScore,
+      article.scores.institutionalImpactScore,
+      article.scores.durationScore,
+      article.scores.manipulationRiskScore,
+      article.classification,
+      JSON.stringify(article.keyThemes),
+      JSON.stringify(article.relevantSymbols),
+      Date.now()
+    );
+
+    logger.debug(`News article inserted: ${article.headline.substring(0, 30)}...`);
   }
 
   getAllTradesWithOutcome(limit: number = 100): TradeRecord[] {

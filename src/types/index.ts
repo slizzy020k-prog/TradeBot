@@ -98,6 +98,7 @@ export interface AIAnalysisRequest {
   recentTrades: Trade[];
   userInfos: UserInfo[];
   memoryContext: MemoryEntry[];
+  newsContext?: Record<string, string>;
 }
 
 export interface AIAnalysisResponse {

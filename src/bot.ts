@@ -7,6 +7,7 @@ import { riskManagementService } from './services/riskManagement';
 import { tradingExecutorService } from './services/tradingExecutor';
 import { userInfoProcessorService } from './services/userInfoProcessor';
 import { AIAnalysisRequest } from './types';
+import { newsIntelligenceService } from './services/newsIntelligence';
 
 export class TradeBot {
   private running = false;
@@ -61,9 +62,26 @@ export class TradeBot {
       const portfolioState = await tradingExecutorService.getPortfolioState();
       logger.debug(`Portfolio value: $${portfolioState.totalValue}`);
 
+      // NEWS INTELLIGENCE - Required before any trade decision
+      logger.info('Fetching market news intelligence...');
+      const newsIntelligence = new Map();
+      for (const symbol of this.watchedSymbols) {
+        const ni = await newsIntelligenceService.getNewsForSymbol(symbol);
+        newsIntelligence.set(symbol, ni);
+        if (ni.hasNews) {
+          logger.info(`News for ${symbol}: ${ni.aggregatedSentiment.overall} (${ni.aggregatedSentiment.articleCount} articles)`);
+        }
+      }
+
       const recentTrades = memoryService.getRecent('trade', 10).map(m => m.metadata?.trade).filter(Boolean);
       const userInfos = userInfoProcessorService.getRecentInfos(10);
       const memoryContext = memoryService.getContext(20);
+
+      // Build news context for each symbol
+      const newsContextForSymbols = new Map<string, string>();
+      for (const [symbol, ni] of newsIntelligence) {
+        newsContextForSymbols.set(symbol, ni.newsContextForAI);
+      }
 
       const analysisRequest: AIAnalysisRequest = {
         marketData,
@@ -71,11 +89,23 @@ export class TradeBot {
         recentTrades: recentTrades as any[],
         userInfos,
         memoryContext,
+        newsContext: Object.fromEntries(newsContextForSymbols),
       };
 
       const analysis = await aiAnalysisService.analyze(analysisRequest);
       logger.info(`AI Recommendation: ${analysis.recommendation} (confidence: ${analysis.confidence}%)`);
       logger.debug(`Reasoning: ${analysis.reasoning}`);
+
+      // Apply news intelligence gate - if manipulation risk is high, reject trade
+      const primarySymbol = marketData[0]?.symbol;
+      const primaryNews = primarySymbol ? newsIntelligence.get(primarySymbol) : null;
+
+      if (primaryNews && primaryNews.riskFactors.length > 0) {
+        logger.warn(`Manipulation/ Risk factors detected for ${primarySymbol}:`);
+        for (const risk of primaryNews.riskFactors) {
+          logger.warn(`  - ${risk}`);
+        }
+      }
 
       memoryService.addAnalysis(
         `${analysis.recommendation.toUpperCase()} - Confidence: ${analysis.confidence}%`,
@@ -83,9 +113,19 @@ export class TradeBot {
         analysis.confidence
       );
 
+      // Only execute if news intelligence doesn't block it
       if (analysis.recommendation !== 'hold' && analysis.confidence > 60) {
-        const rec = analysis.recommendation as 'buy' | 'sell';
-        await this.executeTrade({ ...analysis, recommendation: rec }, marketData, portfolioState);
+        // Additional check: if news shows high manipulation risk, reduce confidence threshold
+        const effectiveConfidence = primaryNews?.aggregatedSentiment.manipulationRisk > 50
+          ? analysis.confidence * 0.7  // Reduce confidence by 30% if manipulation risk is high
+          : analysis.confidence;
+
+        if (effectiveConfidence > 60) {
+          const rec = analysis.recommendation as 'buy' | 'sell';
+          await this.executeTrade({ ...analysis, recommendation: rec }, marketData, portfolioState);
+        } else {
+          logger.info(`Trade blocked due to high manipulation risk or low effective confidence`);
+        }
       }
     } catch (error) {
       logger.error('Error during tick:', error);
