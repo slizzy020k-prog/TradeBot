@@ -7,7 +7,9 @@
     "build": "tsc",
     "start": "node dist/bot.js",
     "dev": "tsc && node dist/bot.js",
-    "cli": "node dist/cli.js"
+    "cli": "node dist/cli.js",
+    "api": "ts-node api-server.ts",
+    "api:dev": "ts-node api-server.ts"
   },
   "keywords": [
     "trading",
@@ -23,12 +25,19 @@
     "@qdrant/js-client-rest": "^1.18.0",
     "axios": "^1.16.1",
     "better-sqlite3": "^12.10.0",
+    "cors": "^2.8.5",
     "dotenv": "^17.4.2",
+    "express": "^4.21.0",
+    "socket.io": "^4.8.0",
     "ts-node": "^10.9.2",
     "typescript": "^6.0.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "@types/better-sqlite3": "^7.6.13",
-    "@types/node": "^25.8.0"
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "@types/node": "^25.8.0",
+    "playwright": "^1.60.0"
   }
 }
