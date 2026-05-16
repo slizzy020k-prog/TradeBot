@@ -558,6 +558,34 @@ npm run cli <command>
 - `tradeEvaluator.ts` - The || 50 pattern is intentional default behavior
 - `vectorStore.ts` line 158 - hash & hash is a no-op but used for numeric conversion
 - `aiAnalysis.ts` - Empty AI response defaults to hold, which is correct behavior
+- `scrapling` tool name - Intentional identifier passed to scrapingService.scrape()
+- `newsClassifier.analyze()` without await - Method is synchronous, no await needed
+- `document.body?.innerText` in scraping - Intentional fallback for content extraction
+- `Math.random()` for ID generation - Intentional for unique ID creation
+
+### 2026-05-16: WebScraping Intelligence Framework
+**Comprehensive debugging of 50 specialized agents completed.**
+
+**Bugs Fixed:**
+- `news/` agents - Missing type annotation on analysis variable (bloombergAgent.ts)
+- `optionsFlowAgent.ts` - Leading space in ` OI:` interface property
+- `darkPoolAgent.ts` - `inferSentiment` always returned 'neutral' regardless of notional value
+- `liquidityAgent.ts` - Invalid regex `[/[\\d.]+]/` (double backslash in character class)
+- `volatilityIndexAgent.ts` - URL typo `/ volatility/daily/` (space in path)
+- `volatilityIndexAgent.ts` - Division by zero when value === change
+- `cryptoCorrelationAgent.ts` - URL typo with space `markets/ currencies`
+- `energyPriceAgent.ts` - Garbage characters in regex `/oil\t+タン prices?/`
+- `treasuryYieldAgent.ts` - URL typo `offfice-offoreign-assets-control`
+- `federalReserveAgent.ts` - Incomplete FOMC URL (missing year)
+- `currencyAgent.ts` - Space in URLs for Bloomberg and FT markets paths
+- `newsSentimentAgent.ts` - Leading space in ' Motley Fool' source name
+- `priceTargetAgent.ts` - URL typo `price-targts` vs `price-targets`
+- `tradingViewAgent.ts` - Regex global flag `test()` without lastIndex reset
+- `sectorRotationAgent.ts` - Same regex global flag issue in `parseRotationSignals` and `parseCrossSectorAnalysis`
+- `geopoliticalRiskAgent.ts` - URLs with spaces in domain names
+- All 8 **geopolitical agents** - Missing `lastIndex = 0` reset before regex exec loops
+
+**50 Agents Debugged:** 10 news, 8 economic, 8 sentiment, 8 earnings, 8 technical, 8 geopolitical
 
 ---
 

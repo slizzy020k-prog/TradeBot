@@ -79,12 +79,14 @@ export class ElectionImpactAgent {
 
     const events: string[] = [];
     for (const pattern of electionPatterns) {
+      pattern.lastIndex = 0;
       let match;
       while ((match = pattern.exec(content)) !== null) {
         events.push(match[0]);
       }
     }
     for (const pattern of policyImpactPatterns) {
+      pattern.lastIndex = 0;
       let match;
       while ((match = pattern.exec(content)) !== null) {
         events.push(match[0]);

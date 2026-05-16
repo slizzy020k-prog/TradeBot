@@ -11,7 +11,7 @@ export class TreasuryYieldAgent {
 
     const urls = [
       `${this.baseUrl}/resource-center/data-chart-center/interest-rates`,
-      `${this.baseUrl}/offfice-offoreign-assets-control/sanctions-programs-information`,
+      `${this.baseUrl}/office-of-foreign-assets-control/sanctions-programs-information`,
     ];
 
     try {

@@ -60,7 +60,7 @@ export class EnergyPriceAgent {
       /oil\s+export[s]?/gi,
       /oil\s+production\s+(?:cut|increase)/gi,
       /oil[- ]?spill/gi,
-      /oil\t+タン prices?/gi,
+      /oil\s+prices?/gi,
       /petroleum\s+market/gi,
     ];
 
@@ -92,18 +92,21 @@ export class EnergyPriceAgent {
 
     const events: string[] = [];
     for (const pattern of oilPatterns) {
+      pattern.lastIndex = 0;
       let match;
       while ((match = pattern.exec(content)) !== null) {
         events.push(match[0]);
       }
     }
     for (const pattern of gasPatterns) {
+      pattern.lastIndex = 0;
       let match;
       while ((match = pattern.exec(content)) !== null) {
         events.push(match[0]);
       }
     }
     for (const pattern of energyPatterns) {
+      pattern.lastIndex = 0;
       let match;
       while ((match = pattern.exec(content)) !== null) {
         events.push(match[0]);

@@ -38,7 +38,7 @@ export class VolatilityIndexAgent {
       const urls = [
         `${this.baseUrl}/volatility/`,
         `${this.baseUrl}/vix/`,
-        `${this.baseUrl}/ volatility/daily/`,
+        `${this.baseUrl}/volatility/daily/`,
       ];
 
       const results = await scrapingService.scrapeBatch(urls);
@@ -173,7 +173,7 @@ export class VolatilityIndexAgent {
     return {
       value,
       change,
-      changePercent: (change / (value - change)) * 100,
+      changePercent: value !== change ? (change / (value - change)) * 100 : 0,
       status,
       termStructure,
       movement: Math.abs(change) > 3 ? 'spike' : change < 0 ? 'declining' : 'stable',

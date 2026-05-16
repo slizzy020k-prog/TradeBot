@@ -4,7 +4,7 @@ import { logger } from '../../../utils/logger';
 
 export class PriceTargetAgent {
   private sourceName: string = 'PriceTarget';
-  private baseUrl: string = 'https://www.benzinga.com/analyst-ratings/price-targts';
+  private baseUrl: string = 'https://www.benzinga.com/analyst-ratings/price-targets';
 
   async scrape(): Promise<NewsAnalysis[]> {
     const analyses: NewsAnalysis[] = [];

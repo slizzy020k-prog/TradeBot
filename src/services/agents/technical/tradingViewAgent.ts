@@ -112,9 +112,15 @@ export class TradingViewAgent {
       /(RSI|MACD|SMA|EMA|support|resistance|breakout)/gi,
     ];
 
-    const headlines = content.split('\n').filter(line =>
-      patterns.some(p => p.test(line)) && line.length > 10 && line.length < 200
-    );
+    const headlines = content.split('\n').filter(line => {
+      for (const pattern of patterns) {
+        pattern.lastIndex = 0; // Reset regex state for each line
+        if (pattern.test(line) && line.length > 10 && line.length < 200) {
+          return true;
+        }
+      }
+      return false;
+    });
 
     for (const headline of headlines.slice(0, 10)) {
       const cleanedHeadline = headline.trim().replace(/[#*_]/g, '');

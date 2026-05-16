@@ -274,6 +274,7 @@ export class SectorRotationAgent {
     const lines = content.split('\n');
     for (const line of lines) {
       for (const pattern of signalPatterns) {
+        pattern.lastIndex = 0; // Reset regex state
         if (pattern.test(line) && line.length > 15) {
           signals.push({
             headline: `Rotation Signal: ${line.substring(0, 80).trim()}`,
@@ -299,6 +300,7 @@ export class SectorRotationAgent {
     const lines = content.split('\n');
     for (const line of lines) {
       for (const pattern of crossPatterns) {
+        pattern.lastIndex = 0; // Reset regex state
         if (pattern.test(line) && line.length > 20) {
           items.push({
             headline: `Cross-Sector: ${line.substring(0, 80).trim()}`,

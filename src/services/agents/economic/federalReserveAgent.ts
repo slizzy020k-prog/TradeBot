@@ -9,8 +9,9 @@ export class FederalReserveAgent {
   async scrape(): Promise<NewsAnalysis[]> {
     const analyses: NewsAnalysis[] = [];
 
+    const currentYear = new Date().getFullYear();
     const urls = [
-      `${this.baseUrl}/monetarypolicy/fomccalendars.htm`,
+      `${this.baseUrl}/monetarypolicy/fomccalendars${currentYear}.htm`,
       `${this.baseUrl}/newsevents/pressreleases.htm`,
       `${this.baseUrl}/monetarypolicy/policy-committee.htm`,
     ];

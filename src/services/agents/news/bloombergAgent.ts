@@ -27,7 +27,7 @@ export class BloombergNewsAgent {
 
       const analyses: NewsAnalysis[] = [];
       for (const headline of headlines.slice(0, limit)) {
-        const analysis = newsClassifier.analyze(
+        const analysis: NewsAnalysis = newsClassifier.analyze(
           headline.title,
           headline.summary || headline.title,
           this.sourceName,

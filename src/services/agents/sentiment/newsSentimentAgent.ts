@@ -25,7 +25,7 @@ export class NewsSentimentAgent {
     { name: 'Seeking Alpha', url: 'https://seekingalpha.com/market-outlook', preferredTool: 'scrapling', sentimentBias: 0 },
     { name: 'Benzinga', url: 'https://www.benzinga.com/markets', preferredTool: 'scrapling', sentimentBias: 0 },
     { name: 'Yahoo Finance', url: 'https://finance.yahoo.com/news', preferredTool: 'scrapling', sentimentBias: 0 },
-    { name: ' Motley Fool', url: 'https://www.fool.com/', preferredTool: 'scrapling', sentimentBias: 10 },
+    { name: 'Motley Fool', url: 'https://www.fool.com/', preferredTool: 'scrapling', sentimentBias: 10 },
     // Trading/Analysis
     { name: 'TradingView', url: 'https://www.tradingview.com/markets/', preferredTool: 'crawl4ai', sentimentBias: 0 },
     { name: 'Investopedia', url: 'https://www.investopedia.com/news/', preferredTool: 'scrapling', sentimentBias: 0 },

@@ -354,7 +354,7 @@ export class LiquidityAgent {
     const match = content.match(symbolRegex);
 
     if (match) {
-      const spreadMatch = match[0].match(/([\\d.]+)/);
+      const spreadMatch = match[0].match(/([\d.]+)/);
       const spread = spreadMatch ? parseFloat(spreadMatch[1]) : 0;
 
       return {

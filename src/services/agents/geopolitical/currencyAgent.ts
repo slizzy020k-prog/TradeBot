@@ -9,7 +9,7 @@ export class CurrencyAgent {
     const urls = [
       'https://www.forexlive.com/',
       'https://www.dailyfx.com/',
-      'https://www.bloomberg.com/markets/ currencies',
+      'https://www.bloomberg.com/markets/currencies',
     ];
     return this.fetchAndAnalyze(urls);
   }
@@ -18,7 +18,7 @@ export class CurrencyAgent {
     const currencySources = [
       'https://www.reuters.com/markets/currencies/',
       'https://www.cnbc.com/forex',
-      'https://www.ft.com/markets/ currencies',
+      'https://www.ft.com/markets/currencies',
     ];
     return this.fetchAndAnalyze(currencySources);
   }
@@ -90,18 +90,21 @@ export class CurrencyAgent {
 
     const events: string[] = [];
     for (const pattern of dollarIndexPatterns) {
+      pattern.lastIndex = 0;
       let match;
       while ((match = pattern.exec(content)) !== null) {
         events.push(match[0]);
       }
     }
     for (const pattern of forexPatterns) {
+      pattern.lastIndex = 0;
       let match;
       while ((match = pattern.exec(content)) !== null) {
         events.push(match[0]);
       }
     }
     for (const pattern of emergingPatterns) {
+      pattern.lastIndex = 0;
       let match;
       while ((match = pattern.exec(content)) !== null) {
         events.push(match[0]);

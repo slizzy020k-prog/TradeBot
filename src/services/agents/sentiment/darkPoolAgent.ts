@@ -288,10 +288,12 @@ export class DarkPoolSentimentAgent {
     const notional = volume * price;
 
     if (notional > 5000000) {
-      // Large block trades give neutral signal without side info
+      // Large block trades - without side info, sentiment is indeterminate
+      // The calling code should use calculateTradeSentiment with actual side data
       return 'neutral';
     }
 
+    // Small trades get neutral sentiment
     return 'neutral';
   }
 

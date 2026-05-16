@@ -95,24 +95,28 @@ export class MetalPriceAgent {
 
     const events: string[] = [];
     for (const pattern of goldPatterns) {
+      pattern.lastIndex = 0;
       let match;
       while ((match = pattern.exec(content)) !== null) {
         events.push(match[0]);
       }
     }
     for (const pattern of silverPatterns) {
+      pattern.lastIndex = 0;
       let match;
       while ((match = pattern.exec(content)) !== null) {
         events.push(match[0]);
       }
     }
     for (const pattern of copperPatterns) {
+      pattern.lastIndex = 0;
       let match;
       while ((match = pattern.exec(content)) !== null) {
         events.push(match[0]);
       }
     }
     for (const pattern of industrialMetalPatterns) {
+      pattern.lastIndex = 0;
       let match;
       while ((match = pattern.exec(content)) !== null) {
         events.push(match[0]);

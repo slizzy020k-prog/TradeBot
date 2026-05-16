@@ -16,7 +16,7 @@ export class CryptoCorrelationAgent {
 
   async getLatestData(): Promise<NewsAnalysis[]> {
     const cryptoSources = [
-      'https://www.bloomberg.com/markets/ currencies',
+      'https://www.bloomberg.com/markets/currencies',
       'https://www.reuters.com/technology/',
       'https://www.cnbc.com/cryptocurrency',
     ];
@@ -84,18 +84,21 @@ export class CryptoCorrelationAgent {
 
     const events: string[] = [];
     for (const pattern of bitcoinPatterns) {
+      pattern.lastIndex = 0;
       let match;
       while ((match = pattern.exec(content)) !== null) {
         events.push(match[0]);
       }
     }
     for (const pattern of correlationPatterns) {
+      pattern.lastIndex = 0;
       let match;
       while ((match = pattern.exec(content)) !== null) {
         events.push(match[0]);
       }
     }
     for (const pattern of macroCryptoPatterns) {
+      pattern.lastIndex = 0;
       let match;
       while ((match = pattern.exec(content)) !== null) {
         events.push(match[0]);

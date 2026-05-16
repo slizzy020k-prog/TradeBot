@@ -9,7 +9,7 @@ interface OptionFlow {
   strike: number;
   premium: number;
   volume: number;
- OI: number;
+  OI: number;
   sentiment: 'bullish' | 'bearish' | 'neutral';
   unusual: boolean;
   estimatedMarketImpact: number;

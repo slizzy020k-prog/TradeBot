@@ -9,8 +9,8 @@ export class GeopoliticalRiskAgent {
   async scrape(): Promise<NewsAnalysis[]> {
     const urls = [
       'https://www.geopoliticalmonitor.com/',
-      'https://www.crisis monitor.com/',
-      'https://www.peacef monitor.org/',
+      'https://www.crisis-monitor.com/',
+      'https://www.peacekeepermonitor.org/',
     ];
     return this.fetchAndAnalyze(urls);
   }
@@ -78,18 +78,21 @@ export class GeopoliticalRiskAgent {
 
     const events: string[] = [];
     for (const pattern of conflictPatterns) {
+      pattern.lastIndex = 0;
       let match;
       while ((match = pattern.exec(content)) !== null) {
         events.push(match[0]);
       }
     }
     for (const pattern of terrorPatterns) {
+      pattern.lastIndex = 0;
       let match;
       while ((match = pattern.exec(content)) !== null) {
         events.push(match[0]);
       }
     }
     for (const pattern of nukePatterns) {
+      pattern.lastIndex = 0;
       let match;
       while ((match = pattern.exec(content)) !== null) {
         events.push(match[0]);
