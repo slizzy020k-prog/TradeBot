@@ -85,8 +85,9 @@ export class RiskAgent {
   private validateLeverage(md: MarketData, portfolio: PortfolioState, trade?: { quantity: number }): boolean {
     if (!trade) return true;
 
+    const safeTotalValue = portfolio.totalValue || 1;
     const positionValue = trade.quantity * md.price;
-    const portfolioPercent = (positionValue / portfolio.totalValue) * 100;
+    const portfolioPercent = (positionValue / safeTotalValue) * 100;
 
     return portfolioPercent <= 20;
   }
@@ -94,12 +95,13 @@ export class RiskAgent {
   private calculateDrawdownImpact(portfolio: PortfolioState, trade?: { quantity: number; side: 'buy' | 'sell' }): number {
     if (!trade) return 0;
 
-    const lossPercent = Math.abs(portfolio.dailyPnL) / portfolio.totalValue * 100;
+    const safeTotalValue = portfolio.totalValue || 1;
+    const lossPercent = Math.abs(portfolio.dailyPnL) / safeTotalValue * 100;
 
-    const positionValue = trade.quantity * (portfolio.totalValue / 100);
+    const positionValue = trade.quantity * (safeTotalValue / 100);
     const potentialLoss = positionValue * 0.01;
 
-    return lossPercent + (potentialLoss / portfolio.totalValue) * 100;
+    return lossPercent + (potentialLoss / safeTotalValue) * 100;
   }
 
   private calculateRiskToReward(
@@ -111,7 +113,7 @@ export class RiskAgent {
     const risk = Math.abs(md.price - trade.stopLoss);
     const reward = Math.abs(trade.takeProfit - md.price);
 
-    return reward / (risk || 1);
+    return reward / Math.max(risk, 0.001);
   }
 
   private estimateRiskToReward(md: MarketData): number {
@@ -121,7 +123,7 @@ export class RiskAgent {
     const risk = range * 0.3;
     const reward = range * 0.6;
 
-    return reward / (risk || 1);
+    return reward / Math.max(risk, 0.001);
   }
 
   private calculatePortfolioExposure(
@@ -130,20 +132,21 @@ export class RiskAgent {
   ): number {
     if (!trade) return 0;
 
-    const positionValue = trade.quantity * (portfolio.totalValue / 100);
-    return (positionValue / portfolio.totalValue) * 100;
+    const safeTotalValue = portfolio.totalValue || 1;
+    const positionValue = trade.quantity * (safeTotalValue / 100);
+    return (positionValue / safeTotalValue) * 100;
   }
 
   private evaluateCorrelatedRisk(
     portfolio: PortfolioState,
     trade?: { quantity: number }
   ): number {
-    if (!trade || portfolio.positions.size === 0) return 0;
+    if (!trade || Object.keys(portfolio.positions).length === 0) return 0;
 
     let risk = 20;
 
-    if (portfolio.positions.size > 5) risk += 20;
-    else if (portfolio.positions.size > 3) risk += 10;
+    if (Object.keys(portfolio.positions).length > 5) risk += 20;
+    else if (Object.keys(portfolio.positions).length > 3) risk += 10;
 
     return Math.min(100, risk);
   }

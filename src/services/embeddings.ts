@@ -70,14 +70,14 @@ export class EmbeddingsService {
         parts.push(`Profit/Loss: $${evaluation.profitLoss.toFixed(2)}`);
       }
 
-      const details = evaluation.evaluationDetails;
-      parts.push(`Trend Alignment: ${details.trendAlignment || 50}/100`);
-      parts.push(`Volatility Score: ${details.volatilityScore || 50}/100`);
-      parts.push(`Liquidity Score: ${details.liquidityScore || 50}/100`);
-      parts.push(`Momentum Confirmation: ${details.momentumConfirmation || 50}/100`);
-      parts.push(`Risk/Reward Ratio: ${(details.riskToReward || 50).toFixed(2)}`);
-      parts.push(`Execution Efficiency: ${details.executionEfficiency || 50}/100`);
-      parts.push(`Market Condition Score: ${details.marketConditionScore || 50}/100`);
+      const details = evaluation.evaluationDetails || {};
+      parts.push(`Trend Alignment: ${details.trendAlignment ?? 50}/100`);
+      parts.push(`Volatility Score: ${details.volatilityScore ?? 50}/100`);
+      parts.push(`Liquidity Score: ${details.liquidityScore ?? 50}/100`);
+      parts.push(`Momentum Confirmation: ${details.momentumConfirmation ?? 50}/100`);
+      parts.push(`Risk/Reward Ratio: ${(details.riskToReward ?? 50).toFixed(2)}`);
+      parts.push(`Execution Efficiency: ${details.executionEfficiency ?? 50}/100`);
+      parts.push(`Market Condition Score: ${details.marketConditionScore ?? 50}/100`);
     }
 
     return parts.join('. ');

@@ -30,8 +30,17 @@ export class RAGContextBuilder {
       similarTrades,
       totalGoodTrades: stats.goodTrades,
       totalBadTrades: stats.badTrades,
-      averageQualityScore: stats.avgQualityScore,
+      averageQualityScore: stats.avgQualityScore ?? 0,
     };
+  }
+
+  private safeJsonParse(json: string | null): any {
+    if (!json) return {};
+    try {
+      return JSON.parse(json);
+    } catch {
+      return {};
+    }
   }
 
   private async getGoodTradesContext(symbol: string): Promise<string> {
@@ -44,9 +53,9 @@ export class RAGContextBuilder {
     let context = `Successful trades for ${symbol} (quality >= 65):\n`;
 
     for (const trade of goodTrades) {
-      const details = trade.evaluationDetails ? JSON.parse(trade.evaluationDetails) : {};
+      const details = this.safeJsonParse(trade.evaluation_details);
       context += `- ${trade.side.toUpperCase()} ${trade.quantity} @ $${trade.price}\n`;
-      context += `  Quality: ${trade.qualityScore?.toFixed(1)}/100 | P/L: $${trade.profitLoss?.toFixed(2) || 'N/A'}\n`;
+      context += `  Quality: ${trade.quality_score?.toFixed(1)}/100 | P/L: $${trade.profit_loss?.toFixed(2) || 'N/A'}\n`;
       context += `  Trend: ${details.trendAlignment?.toFixed(0)} | Volatility: ${details.volatilityScore?.toFixed(0)} | Momentum: ${details.momentumConfirmation?.toFixed(0)}\n`;
       context += `  Risk/Reward: ${details.riskToReward?.toFixed(2)} | Market Fit: ${details.marketConditionScore?.toFixed(0)}\n`;
     }
@@ -64,9 +73,9 @@ export class RAGContextBuilder {
     let context = `Unsuccessful trades for ${symbol} (quality < 65):\n`;
 
     for (const trade of badTrades) {
-      const details = trade.evaluationDetails ? JSON.parse(trade.evaluationDetails) : {};
+      const details = this.safeJsonParse(trade.evaluation_details);
       context += `- ${trade.side.toUpperCase()} ${trade.quantity} @ $${trade.price}\n`;
-      context += `  Quality: ${trade.qualityScore?.toFixed(1)}/100 | P/L: $${trade.profitLoss?.toFixed(2) || 'N/A'}\n`;
+      context += `  Quality: ${trade.quality_score?.toFixed(1)}/100 | P/L: $${trade.profit_loss?.toFixed(2) || 'N/A'}\n`;
       context += `  Trend: ${details.trendAlignment?.toFixed(0)} | Volatility: ${details.volatilityScore?.toFixed(0)} | Momentum: ${details.momentumConfirmation?.toFixed(0)}\n`;
       context += `  Risk/Reward: ${details.riskToReward?.toFixed(2)} | Market Fit: ${details.marketConditionScore?.toFixed(0)}\n`;
     }
@@ -85,9 +94,9 @@ export class RAGContextBuilder {
       let context = 'Similar historical trades:\n';
 
       for (const trade of similar) {
-        context += `- ${trade.side} ${trade.symbol} (quality: ${trade.qualityScore.toFixed(0)}/100)\n`;
-        context += `  Trend: ${trade.trendAlignment.toFixed(0)} | Vol: ${trade.volatilityScore.toFixed(0)} | Liquidity: ${trade.liquidityScore.toFixed(0)}\n`;
-        context += `  Risk/Reward: ${trade.riskToReward.toFixed(2)} | P/L: $${trade.profitLoss?.toFixed(2) || 'N/A'}\n`;
+        context += `- ${trade.side} ${trade.symbol} (quality: ${(trade.qualityScore ?? 0).toFixed(0)}/100)\n`;
+        context += `  Trend: ${(trade.trendAlignment ?? 0).toFixed(0)} | Vol: ${(trade.volatilityScore ?? 0).toFixed(0)} | Liquidity: ${(trade.liquidityScore ?? 0).toFixed(0)}\n`;
+        context += `  Risk/Reward: ${(trade.riskToReward ?? 0).toFixed(2)} | P/L: $${trade.profitLoss?.toFixed(2) || 'N/A'}\n`;
       }
 
       return context;
@@ -105,16 +114,16 @@ export class RAGContextBuilder {
       return `Insufficient trade history for ${symbol} to extract learned parameters.`;
     }
 
-    const goodOnes = symbolTrades.filter(t => t.isGoodTrade === 1);
-    const badOnes = symbolTrades.filter(t => t.isGoodTrade === 0);
+    const goodOnes = symbolTrades.filter(t => t.is_good_trade === 1);
+    const badOnes = symbolTrades.filter(t => t.is_good_trade === 0);
 
     let learned = 'Learned parameters from trade history:\n';
 
     if (goodOnes.length > 0) {
-      const goodAvgTrend = this.avg(goodOnes.map(t => JSON.parse(t.evaluationDetails || '{}').trendAlignment || 50));
-      const goodAvgVol = this.avg(goodOnes.map(t => JSON.parse(t.evaluationDetails || '{}').volatilityScore || 50));
-      const goodAvgMomentum = this.avg(goodOnes.map(t => JSON.parse(t.evaluationDetails || '{}').momentumConfirmation || 50));
-      const goodAvgRiskReward = this.avg(goodOnes.map(t => JSON.parse(t.evaluationDetails || '{}').riskToReward || 50));
+      const goodAvgTrend = this.avg(goodOnes.map(t => this.safeJsonParse(t.evaluation_details).trendAlignment));
+      const goodAvgVol = this.avg(goodOnes.map(t => this.safeJsonParse(t.evaluation_details).volatilityScore));
+      const goodAvgMomentum = this.avg(goodOnes.map(t => this.safeJsonParse(t.evaluation_details).momentumConfirmation));
+      const goodAvgRiskReward = this.avg(goodOnes.map(t => this.safeJsonParse(t.evaluation_details).riskToReward));
 
       learned += `\nSuccessful trades avg parameters:\n`;
       learned += `  Trend Alignment: ${goodAvgTrend.toFixed(0)}\n`;
@@ -124,9 +133,9 @@ export class RAGContextBuilder {
     }
 
     if (badOnes.length > 0) {
-      const badAvgTrend = this.avg(badOnes.map(t => JSON.parse(t.evaluationDetails || '{}').trendAlignment || 50));
-      const badAvgVol = this.avg(badOnes.map(t => JSON.parse(t.evaluationDetails || '{}').volatilityScore || 50));
-      const badAvgMomentum = this.avg(badOnes.map(t => JSON.parse(t.evaluationDetails || '{}').momentumConfirmation || 50));
+      const badAvgTrend = this.avg(badOnes.map(t => this.safeJsonParse(t.evaluation_details).trendAlignment));
+      const badAvgVol = this.avg(badOnes.map(t => this.safeJsonParse(t.evaluation_details).volatilityScore));
+      const badAvgMomentum = this.avg(badOnes.map(t => this.safeJsonParse(t.evaluation_details).momentumConfirmation));
 
       learned += `\nUnsuccessful trades avg parameters:\n`;
       learned += `  Trend Alignment: ${badAvgTrend.toFixed(0)}\n`;

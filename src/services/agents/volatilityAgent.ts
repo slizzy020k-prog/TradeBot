@@ -54,7 +54,7 @@ export class VolatilityAgent {
       );
     });
 
-    return trueRanges.reduce((a, b) => a + b, 0) / trueRanges.length;
+    return trueRanges.length > 0 ? trueRanges.reduce((a, b) => a + b, 0) / trueRanges.length : (high - low) * 0.5;
   }
 
   private classifyRegime(atr: number, price: number): 'low' | 'normal' | 'high' | 'extreme' {

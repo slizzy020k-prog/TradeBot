@@ -12,12 +12,12 @@ export interface TradeRecord {
   price: number;
   timestamp: number;
   status: string;
-  qualityScore: number | null;
-  evaluationDetails: string | null;
-  isGoodTrade: number | null;
+  quality_score: number | null;
+  evaluation_details: string | null;
+  is_good_trade: number | null;
   parameters: string | null;
-  embeddingId: string | null;
-  profitLoss: number | null;
+  embedding_id: string | null;
+  profit_loss: number | null;
 }
 
 export interface TradeParametersRecord {

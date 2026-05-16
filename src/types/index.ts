@@ -79,7 +79,7 @@ export interface UserInfo {
 
 export interface PortfolioState {
   cash: number;
-  positions: Map<string, number>;
+  positions: Record<string, number>;
   totalValue: number;
   dailyPnL: number;
 }

@@ -98,30 +98,36 @@ export class TradeBot {
   private async executeTrade(
     analysis: { recommendation: 'buy' | 'sell'; suggestedQuantity?: number; stopLoss?: number; takeProfit?: number },
     marketData: { symbol: string; price: number }[],
-    portfolioState: { cash: number; positions: Map<string, number> }
+    portfolioState: { cash: number; positions: Record<string, number> }
   ): Promise<void> {
-    for (const md of marketData) {
-      const recommendation = analysis.recommendation;
+    // Execute trade only for the primary analyzed symbol (first in array)
+    const primarySymbol = marketData[0];
+    if (!primarySymbol) {
+      logger.warn('No market data available for trade execution');
+      return;
+    }
 
-      let quantity = analysis.suggestedQuantity || riskManagementService.calculateQuantity(md.price, config.maxPositionSize);
+    const md = primarySymbol;
+    const recommendation = analysis.recommendation;
 
-      const riskCheck = riskManagementService.checkPositionSize(quantity, md.price);
-      if (!riskCheck.approved) {
-        logger.warn(`Trade not approved: ${riskCheck.reason}`);
-        continue;
-      }
-      if (riskCheck.adjustedQuantity) {
-        quantity = riskCheck.adjustedQuantity;
-      }
+    let quantity = analysis.suggestedQuantity || riskManagementService.calculateQuantity(md.price, config.maxPositionSize);
 
-      try {
-        const trade = await tradingExecutorService.submitOrder(md.symbol, recommendation, quantity);
-        memoryService.addTrade(trade);
+    const riskCheck = riskManagementService.checkPositionSize(quantity, md.price);
+    if (!riskCheck.approved) {
+      logger.warn(`Trade not approved for ${md.symbol}: ${riskCheck.reason}`);
+      return;
+    }
+    if (riskCheck.adjustedQuantity) {
+      quantity = riskCheck.adjustedQuantity;
+    }
 
-        logger.info(`Trade executed: ${recommendation.toUpperCase()} ${quantity} ${md.symbol} @ $${md.price}`);
-      } catch (error) {
-        logger.error(`Failed to execute trade for ${md.symbol}:`, error);
-      }
+    try {
+      const trade = await tradingExecutorService.submitOrder(md.symbol, recommendation, quantity);
+      memoryService.addTrade(trade);
+
+      logger.info(`Trade executed: ${recommendation.toUpperCase()} ${quantity} ${md.symbol} @ $${md.price}`);
+    } catch (error) {
+      logger.error(`Failed to execute trade for ${md.symbol}:`, error);
     }
   }
 

@@ -46,8 +46,8 @@ export class MomentumAgent {
     }
 
     const closes = historical.slice(-14).map(h => h.close).filter((c): c is number => c !== undefined);
-    const lastPrice = md.close ?? md.price;
-    if (closes.length === 0) return 50 + ((lastPrice - (md.open || lastPrice)) / (md.open || lastPrice)) * 100;
+    const lastPrice = md.close ?? md.price ?? 0;
+    if (closes.length === 0) return 50 + ((lastPrice - (md.open || lastPrice)) / (md.open || lastPrice || 1)) * 100;
     closes.push(lastPrice);
 
     const gains: number[] = [];

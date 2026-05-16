@@ -55,7 +55,7 @@ export class EnhancedTradeEvaluator {
         passedHardLimits: subAgentResults.riskScore >= 60,
         violations: subAgentResults.riskScore < 60 ? ['Risk score below threshold'] : [],
         riskToRewardRatio: proposedTrade.stopLoss && proposedTrade.takeProfit
-          ? (proposedTrade.takeProfit - marketData.price) / Math.abs(marketData.price - proposedTrade.stopLoss)
+          ? (proposedTrade.takeProfit - marketData.price) / Math.max(Math.abs(marketData.price - proposedTrade.stopLoss), 0.001)
           : 2,
       } : undefined,
     };

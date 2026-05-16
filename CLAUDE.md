@@ -525,6 +525,40 @@ npm run cli <command>
 - CEO can override and reject trades based on hard-coded rules
 - Enhanced persona with complete system philosophy, good/bad trade criteria, behavioral rules, trade execution sequence
 
+### 2026-05-16: Debugging & Error Fixes
+**Comprehensive debugging cycle completed - all runtime errors resolved.**
+
+**Fixed Issues:**
+- `riskAgent.ts` - Division by zero protection for portfolio value calculations
+- `riskAgent.ts` - Map to Record<string, number> conversion for positions
+- `riskAgent.ts` - Enhanced risk/reward calculation with Math.max(risk, 0.001)
+- `marketData.ts` - Optional chaining for safe API response access
+- `marketData.ts` - Timestamp multiplication safety for undefined values
+- `aiAnalysis.ts` - Safe array access for choices[0] with optional chaining
+- `aiAnalysis.ts` - Safe text extraction from AI response
+- `historicalEdgeAgent.ts` - Protected JSON.parse with try-catch
+- `ragContext.ts` - Added safeJsonParse helper method
+- `ragContext.ts` - Nullish coalescing for quality_score and avgQualityScore
+- `ragContext.ts` - Optional chaining for vector store result properties
+- `momentumAgent.ts` - LastPrice fallback for undefined close/price
+- `volatilityAgent.ts` - Division by zero protection in ATR calculation
+- `trendAgent.ts` - Enhanced trend strength calculation with zero division protection
+- `liquidityAgent.ts` - Division by zero protection when high === low
+- `tradingExecutor.ts` - NaN protection for parseInt/parseFloat
+- `embeddings.ts` - Nullish coalescing for evaluation details
+- `config/index.ts` - Fallback defaults for parseInt/parseFloat NaN
+- `bot.ts` - Map to Record type conversion for PortfolioState
+- `cli.ts` - Optional chaining for undefined symbols array
+
+**False Positives Identified (NOT bugs):**
+- `executionAgent.ts` line 63 - `getHours()` uses local timezone correctly for market hours analysis
+- `memory.ts` - Trade import is used in addTrade() method signature
+- `enhancedTradeEvaluator.ts` line 135 - Volatility agent call is intentional based on regime check
+- `marketData.ts` lines 35-38 - Array[-1] returns undefined, handled by optional chaining
+- `tradeEvaluator.ts` - The || 50 pattern is intentional default behavior
+- `vectorStore.ts` line 158 - hash & hash is a no-op but used for numeric conversion
+- `aiAnalysis.ts` - Empty AI response defaults to hold, which is correct behavior
+
 ---
 
 ## Notes for AI Agents

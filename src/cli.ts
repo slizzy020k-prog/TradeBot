@@ -28,7 +28,7 @@ async function main() {
     case 'status': {
       const status = tradeBot.status();
       console.log(`Running: ${status.running}`);
-      console.log(`Symbols: ${status.symbols.join(', ') || 'none'}`);
+      console.log(`Symbols: ${(status.symbols || []).join(', ') || 'none'}`);
       break;
     }
 

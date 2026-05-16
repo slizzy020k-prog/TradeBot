@@ -67,7 +67,12 @@ export class HistoricalEdgeAgent {
     let matches = 0;
 
     for (const trade of trades) {
-      const tradeDetails = trade.parameters ? JSON.parse(trade.parameters) : {};
+      let tradeDetails: Record<string, any> = {};
+      try {
+        tradeDetails = trade.parameters ? JSON.parse(trade.parameters) : {};
+      } catch {
+        // Malformed JSON, use empty object
+      }
       const tradeConditions = {
         priceChange: tradeDetails.priceChange || 0,
         volume: trade.volume || 0,

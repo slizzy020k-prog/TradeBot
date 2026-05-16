@@ -41,9 +41,9 @@ export class TradingExecutorService {
     try {
       const [account, positions] = await Promise.all([this.getAccount(), this.getPositions()]);
 
-      const positionsMap = new Map<string, number>();
+      const positionsMap: Record<string, number> = {};
       for (const pos of positions) {
-        positionsMap.set(pos.symbol, parseFloat(pos.qty));
+        positionsMap[pos.symbol] = parseFloat(pos.qty);
       }
 
       return {
@@ -76,8 +76,8 @@ export class TradingExecutorService {
         id: response.data.id,
         symbol: response.data.symbol,
         side: response.data.side,
-        quantity: parseInt(response.data.qty, 10),
-        price: parseFloat(response.data.filled_avg_price || '0'),
+        quantity: parseInt(response.data.qty, 10) || 0,
+        price: parseFloat(response.data.filled_avg_price || '0') || 0,
         timestamp: Date.now(),
         status: 'pending',
       };

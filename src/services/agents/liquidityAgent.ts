@@ -78,7 +78,7 @@ export class LiquidityAgent {
     if (volume > 5000000) score += 20;
     if (range > 1 && range < 3) score += 15;
 
-    const pricePosition = md.close && md.high && md.low
+    const pricePosition = md.close && md.high && md.low && md.high !== md.low
       ? (md.close - md.low) / (md.high - md.low)
       : 0.5;
 

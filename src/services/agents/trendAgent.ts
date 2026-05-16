@@ -66,9 +66,12 @@ export class TrendAgent {
     const closes = historical.map(h => h.close).filter((c): c is number => c !== undefined);
     if (closes.length < 2) return 50;
 
-    const changes = closes.slice(1).map((c, i) => (c - (closes[i] ?? c)) / (closes[i] ?? c));
-    const avgChange = changes.reduce((a, b) => a + b, 0) / changes.length;
-    const consistency = changes.filter(c => (avgChange > 0 ? c > 0 : c < 0)).length / changes.length;
+    const changes = closes.slice(1).map((c, i) => {
+      const prev = closes[i] ?? c;
+      return prev !== 0 ? (c - prev) / prev : 0;
+    });
+    const avgChange = changes.length > 0 ? changes.reduce((a, b) => a + b, 0) / changes.length : 0;
+    const consistency = changes.length > 0 ? changes.filter(c => (avgChange > 0 ? c > 0 : c < 0)).length / changes.length : 0;
 
     return Math.min(100, consistency * 100 * (1 + Math.abs(avgChange) * 10));
   }

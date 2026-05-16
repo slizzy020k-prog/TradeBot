@@ -46,7 +46,8 @@ export class AIAnalysisService {
         }
       );
 
-      const text = response.data.choices[0].message.content;
+      const choice = response.data.choices?.[0];
+      const text = choice?.message?.content || '';
       return this.parseAIResponse(text);
     } catch (error: any) {
       logger.error('MiniMax API error:', error.response?.data || error.message);
@@ -70,8 +71,8 @@ export class AIAnalysisService {
         messages: [{ role: 'user', content: prompt }],
       });
 
-      const contentBlock = response.content[0];
-      const text = 'text' in contentBlock ? contentBlock.text : '';
+      const contentBlock = response.content?.[0];
+      const text = contentBlock && 'text' in contentBlock ? contentBlock.text : '';
       return this.parseAIResponse(text);
     } catch (error) {
       logger.error('Anthropic API error:', error);
@@ -95,7 +96,7 @@ export class AIAnalysisService {
     prompt += `- Cash: $${portfolioState.cash}\n`;
     prompt += `- Total Value: $${portfolioState.totalValue}\n`;
     prompt += `- Daily P&L: $${portfolioState.dailyPnL}\n`;
-    prompt += `- Positions: ${Array.from(portfolioState.positions.entries()).map(([s, q]) => `${s}: ${q}`).join(', ') || 'none'}\n`;
+    prompt += `- Positions: ${Object.entries(portfolioState.positions).map(([s, q]) => `${s}: ${q}`).join(', ') || 'none'}\n`;
 
     if (userInfos.length > 0) {
       prompt += `\n=== USER-PROVIDED INFORMATION ===\n`;
