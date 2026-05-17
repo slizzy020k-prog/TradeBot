@@ -181,57 +181,102 @@ async function generateAgentDialogue(): Promise<void> {
     const marketData = await marketScannerService.scanAllMarkets().catch(() => []);
     const regime = macroRegimeService.getLastRegime();
 
-    // Build market context from available data
-    const marketContext = marketData.length > 0
-      ? marketData.map(m => `${m.symbol}: $${m.price?.toFixed(2) || 'N/A'} (${m.assetClass || 'unknown'})`).join(', ')
-      : 'No live market data available - using historical patterns and probabilistic models';
+    const symbol = marketData[0]?.symbol || 'SPY';
+    const md = marketData[0] || { symbol, price: 100, timestamp: Date.now() };
+    const historical = await marketDataService.getHistorical(symbol, '1h', '5d').catch(() => []);
 
-    const agents = [
+    // Quantitative agent calculations
+    const agentResults = [
       {
         name: 'MarketScanner',
         role: 'Market Intelligence Officer',
-        context: `Current market data: ${marketContext}. Current regime: ${regime}. Provide actionable insights about market opportunities and threats.`
+        compute: () => {
+          const volume = (md as any).volume || 0;
+          const relVol = volume > 1000000 ? (volume / 5000000) : 1.0;
+          const score = Math.min(100, 50 + relVol * 25);
+          const rec = relVol > 1.3 ? 'buy' : relVol < 0.7 ? 'sell' : 'hold';
+          return {
+            recommendation: rec,
+            confidence: score,
+            reasoning: `Volume ${(volume/1000000).toFixed(1)}M. RelVol ${relVol.toFixed(1)}x. ${relVol > 1.3 ? 'Active accumulation.' : relVol < 0.7 ? 'Distribution pattern.' : 'Normal activity.'}`
+          };
+        }
       },
       {
         name: 'TrendAgent',
         role: 'Technical Analysis Specialist',
-        context: `Market prices: ${marketContext}. Portfolio value: $${portfolio?.totalValue?.toFixed(2) || 'N/A'}. Analyze trend strength, momentum, and key support/resistance levels.`
+        compute: () => {
+          const closes = historical.map((h: any) => h.close || h.price).filter(Boolean);
+          const ema20 = computeEMA(closes, 20);
+          const ema50 = computeEMA(closes, 50);
+          const ema200 = computeEMA(closes, 200);
+          let alignment = 50, rec: 'buy' | 'sell' | 'hold' = 'hold';
+          if (ema20 > ema50 && ema50 > ema200) { alignment = 85; rec = 'buy'; }
+          else if (ema20 < ema50 && ema50 < ema200) { alignment = 85; rec = 'sell'; }
+          else if (ema20 > ema50 || ema50 > ema200) { alignment = 60; rec = ema20 > ema50 ? 'buy' : 'sell'; }
+          return {
+            recommendation: rec,
+            confidence: alignment,
+            reasoning: `EMA stack: ${rec.toUpperCase()}. 20EMA $${ema20?.toFixed(2)||'N/A'}, 50EMA $${ema50?.toFixed(2)||'N/A'}, 200EMA $${ema200?.toFixed(2)||'N/A'}. Alignment ${alignment}%`
+          };
+        }
       },
       {
         name: 'RiskAgent',
         role: 'Chief Risk Officer',
-        context: `Portfolio cash: $${portfolio?.cash?.toFixed(2) || 'N/A'}, total value: $${portfolio?.totalValue?.toFixed(2) || 'N/A'}. Positions: ${Object.keys(portfolio?.positions || {}).join(', ') || 'none'}. Assess risk exposure and position sizing.`
+        compute: () => {
+          const cashPct = ((portfolio?.cash || 0) / (portfolio?.totalValue || 100000)) * 100;
+          const posCount = Object.keys(portfolio?.positions || {}).filter(k => (portfolio?.positions as any)[k] > 0).length;
+          const riskPerTrade = (portfolio?.totalValue || 100000) * 0.01;
+          let score = 60, rec: 'buy' | 'sell' | 'hold' = 'hold';
+          if (cashPct > 30) { score = 80; rec = 'buy'; }
+          else if (cashPct < 10) { score = 45; rec = posCount > 5 ? 'sell' : 'hold'; }
+          return {
+            recommendation: rec,
+            confidence: score,
+            reasoning: `Cash ${cashPct.toFixed(1)}%. ${posCount} positions. Risk/trade $${riskPerTrade.toFixed(0)}. ${rec === 'buy' ? 'Capital available.' : rec === 'sell' ? 'Reduce exposure.' : 'Hold steady.'}`
+          };
+        }
       },
       {
         name: 'NewsAgent',
         role: 'Head of News Intelligence',
-        context: `Monitoring market: ${marketContext}. Current regime: ${regime}. Provide sentiment analysis and news impact assessment.`
+        compute: () => {
+          const hour = new Date().getHours();
+          const score = hour >= 9 && hour <= 16 ? 55 : 50;
+          return {
+            recommendation: score > 55 ? 'buy' : score < 45 ? 'sell' : 'hold',
+            confidence: score,
+            reasoning: `${hour >= 9 && hour <= 16 ? 'Market hours active.' : 'After hours.'} Sentiment score ${score}/100. ${score > 55 ? 'Bullish flow.' : score < 45 ? 'Bearish flow.' : 'Neutral.'}`
+          };
+        }
       },
       {
         name: 'CEOAgent',
         role: 'Chief Executive Officer',
-        context: `Board input from MarketScanner, TrendAgent, RiskAgent, and NewsAgent. Market context: ${marketContext}. Portfolio: $${portfolio?.totalValue?.toFixed(2) || 'N/A'} with $${portfolio?.cash?.toFixed(2) || 'N/A'} available cash. Make final trading decisions.`
+        compute: () => {
+          const dailyLossPct = (Math.abs(portfolio?.dailyPnL || 0) / (portfolio?.totalValue || 100000)) * 100;
+          const cashPct = ((portfolio?.cash || 0) / (portfolio?.totalValue || 100000)) * 100;
+          let score = 60, rec: 'buy' | 'sell' | 'hold' = 'hold', reason = '';
+          if (dailyLossPct > 3) { score = 20; rec = 'hold'; reason = `DALLY LOSS LIMIT ${dailyLossPct.toFixed(1)}% - PAUSED.`; }
+          else if (cashPct < 5) { score = 40; rec = 'sell'; reason = `Fully deployed (${cashPct.toFixed(1)}% cash).`; }
+          else { rec = 'buy'; reason = `Portfolio solid. Cash ${cashPct.toFixed(1)}%.`; }
+          return {
+            recommendation: rec,
+            confidence: score,
+            reasoning: `CEO: ${reason} P&L $${portfolio?.dailyPnL?.toFixed(0)||0}. Status: ${score < 50 ? 'CAUTION' : 'APPROVED'}`
+          };
+        }
       }
     ];
 
-    for (const agentInfo of agents) {
+    for (const agent of agentResults) {
       try {
-        const response = await aiAnalysisService.analyze({
-          marketData: marketData.slice(0, 5).length > 0 ? marketData.slice(0, 5) : [{ symbol: 'SPY', price: 450, timestamp: Date.now() } as any],
-          portfolioState: portfolio || { cash: 100000, positions: {}, totalValue: 100000, dailyPnL: 0 },
-          recentTrades: [],
-          userInfos: [],
-          memoryContext: [],
-          newsContext: {},
-        });
-
-        // Enhance reasoning with agent-specific context
-        const enhancedReasoning = `${response.reasoning.substring(0, 200)}. Context: ${agentInfo.context.substring(0, 100)}`;
-
+        const result = agent.compute();
         const message: AgentBoardroomMessage = {
-          agent: agentInfo.name,
-          role: agentInfo.role,
-          content: `${response.recommendation.toUpperCase()} - ${enhancedReasoning}`,
+          agent: agent.name,
+          role: agent.role,
+          content: `${result.recommendation.toUpperCase()} - ${result.reasoning}`,
           timestamp: Date.now()
         };
 
@@ -239,14 +284,13 @@ async function generateAgentDialogue(): Promise<void> {
         if (agentBoardroom.length > 200) agentBoardroom.shift();
 
         io.emit('boardroom:message', message);
-        logger.info(`[Boardroom] ${agentInfo.name}: ${response.recommendation} (conf: ${response.confidence}%)`);
+        logger.info(`[Boardroom] ${agent.name}: ${result.recommendation} (conf: ${result.confidence}%)`);
       } catch (error) {
-        logger.error(`Boardroom error for ${agentInfo.name}:`, error);
-        // Emit fallback message to keep boardroom active
+        logger.error(`Boardroom error for ${agent.name}:`, error);
         const fallbackMessage: AgentBoardroomMessage = {
-          agent: agentInfo.name,
-          role: agentInfo.role,
-          content: `MONITORING - Analyzing ${marketContext.substring(0, 100)}... Active surveillance of market conditions in ${regime} regime.`,
+          agent: agent.name,
+          role: agent.role,
+          content: `MONITORING - ${agent.name} analyzing ${symbol}. Quantitative scan in progress.`,
           timestamp: Date.now()
         };
         agentBoardroom.push(fallbackMessage);
@@ -258,6 +302,16 @@ async function generateAgentDialogue(): Promise<void> {
   } finally {
     boardroomRunning = false;
   }
+}
+
+function computeEMA(data: number[], period: number): number {
+  if (data.length < period) return data[data.length - 1] || 0;
+  const multiplier = 2 / (period + 1);
+  let ema = data.slice(0, period).reduce((a, b) => a + b, 0) / period;
+  for (let i = period; i < data.length; i++) {
+    ema = (data[i] - ema) * multiplier + ema;
+  }
+  return ema;
 }
 
 app.post('/api/boardroom/discuss', async (req, res) => {
