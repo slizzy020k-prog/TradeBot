@@ -629,6 +629,193 @@ http://localhost:3000
 Backend: express, socket.io, cors
 Frontend: socket.io-client, recharts, framer-motion, lucide-react, lightweight-charts, @tanstack/react-query
 
+### 2026-05-16: Enhanced Trading Intelligence
+**New services and agent enhancements added.**
+
+**New Services:**
+1. **Backtester Service** (`src/services/backtester.ts`)
+   - Historical strategy testing with Yahoo Finance data
+   - Performance metrics: Sharpe ratio, max drawdown, win rate, profit factor
+   - Configurable slippage simulation for realistic results
+
+2. **Order Book Agent** (`src/services/agents/orderBookAgent.ts`)
+   - Spread quality analysis (tight/moderate/wide)
+   - Order imbalance detection (buy vs sell pressure)
+   - Spoofing pattern detection
+   - Manipulation risk scoring
+
+3. **Analytics Service** (`src/services/analyticsService.ts`)
+   - Comprehensive performance metrics from SQLite trade data
+   - Monthly returns and equity curve tracking
+   - Agent performance tracking
+
+4. **Portfolio Optimizer** (`src/services/portfolioOptimizer.ts`)
+   - Mean-variance and risk-parity optimization
+   - Rebalancing suggestions when drift > 5%
+   - Historical covariance calculation
+
+5. **Report Generator** (`src/services/reportGenerator.ts`)
+   - Performance reports for 1w/1m/3m periods
+   - Trade-level detail with recommendations
+   - Daily summary generation
+
+6. **ML Predictor** (`src/services/mlPredictor.ts`)
+   - Pattern-based trade success prediction
+   - Success probability based on historical patterns
+   - Top symbols by prediction score
+
+**Agent Enhancements:**
+- **SEC Filing Agent** - Pre-announcement score detection
+- **Options Flow Agent** - Signal quality scoring, unusual activity flagging
+- **Twitter Sentiment Agent** - Signal quality calculation
+
+**Frontend Enhancements:**
+- **PerformanceMetrics Component** - Equity curve, monthly returns, Sharpe ratio, drawdown
+- **TradeJournal** - Filtering by symbol, P&L, quality score
+
+**Config Additions:**
+- `SLIPPAGE_RATE` - For realistic paper trading simulation
+
+**API Endpoints Added:**
+- `GET /api/analytics/performance` - Performance metrics
+- `GET /api/analytics/symbol/:symbol` - Symbol-specific analytics
+- `GET /api/analytics/agents` - Agent performance
+- `GET /api/portfolio/optimize` - Portfolio optimization
+- `GET /api/reports/performance?period=1w|1m|3m` - Performance reports
+- `GET /api/reports/daily` - Daily summary
+- `GET /api/predict/:symbol` - ML predictions
+- `GET /api/predict/top` - Top predicted symbols
+
+### 2026-05-17: Trading 212 API Integration
+**Live broker integration added via beta API.**
+
+**New Service: `src/services/trading212.ts`**
+- Real-time portfolio data from Trading 212
+- Position tracking with P&L calculations
+- Order submission and cancellation
+- Quote fetching for any ticker
+
+**API Endpoints Added:**
+- `GET /api/t212/portfolio` - Total value, cash, positions value
+- `GET /api/t212/positions` - All open positions with live P&L
+- `GET /api/t212/orders` - Pending and historical orders
+- `GET /api/t212/quote/:ticker` - Real-time quote data
+- `POST /api/t212/order` - Submit buy/sell order
+- `DELETE /api/t212/order/:orderId` - Cancel pending order
+
+**Frontend Component: `frontend/components/dashboard/Trading212Panel.tsx`**
+- Live portfolio summary with total value, cash, P&L
+- Real-time position list with profit/loss per ticker
+- Auto-refresh every 30 seconds
+- Error handling with retry functionality
+- Visual indicators for bullish/bearish positions
+
+**Configuration:**
+- `TRADING212_API_KEY` - Beta API key from Trading 212 developer portal
+- Config field: `trading212ApiKey` in `src/config/index.ts`
+
+**Security:**
+- API key stored in `.env` (not committed to git)
+- All sensitive config loaded from environment variables
+- `.env.example` contains template only
+
+### 2026-05-17: Full Automation & Learning System
+**Automated trading with continuous news and learning enabled.**
+
+**New Services:**
+1. **WebScraperService** (`src/services/scraping/webScraperService.ts`)
+   - Google News RSS feed scraping (reliable, no blocking)
+   - Bing News search fallback
+   - Geopolitical news scraping (7 topics: US-China, Fed rates, Russia-Ukraine, Middle East, global recession, OPEC, inflation)
+   - 1-hour cache to avoid duplicate fetches
+
+2. **News Intelligence Enhancements** (`src/services/newsIntelligence.ts`)
+   - `scrapeGeopoliticalNews()` - Fetches 70+ geopolitical articles per hour
+   - `scrapeAllNews(symbols)` - Comprehensive news for all watched symbols
+   - Automatic fallback from failed sources to web scraper
+
+**Bot Automation (`src/bot.ts`):**
+- `startNewsAutomation()` - Runs comprehensive news scrape every 60 minutes
+- `updateTradeOutcomes()` - Tracks P&L for open positions, learns from outcomes
+- Automatic news + analysis cycle before every trade decision
+
+**AI Integration Fix:**
+- Fixed MiniMax API endpoint from `api.minimaxi.com` to `api.minimaxi.chat`
+- Model: `MiniMax-M2.7`
+
+**Alpaca Paper Trading:**
+- Connected with real API keys (PKIS4RPI66SBIDZBQTE25O4A2X)
+- $100,000 paper trading balance
+- Orders: market, day time-in-force
+
+**Frontend UI Fixes:**
+- `PerformanceMetrics.tsx` - Expanded from 1 column to 2 columns
+- Fixed Recharts formatter type errors
+- Added profitLoss and qualityScore to Trade interface
+
+**Running the Fully Automated System:**
+```bash
+# Terminal 1 - Backend API Server
+npm run api
+
+# Terminal 2 - Frontend
+cd frontend && npm run dev
+
+# API Endpoints for control:
+curl -X POST "http://localhost:3001/api/bot/start" -H "Content-Type: application/json" -d '{"symbols":["AAPL","TSLA","MSFT"]}'
+curl "http://localhost:3001/api/bot/status"
+curl "http://localhost:3001/api/portfolio"
+curl "http://localhost:3001/api/orders"
+
+# Manual trade:
+curl -X POST "http://localhost:3001/api/order" -H "Content-Type: application/json" -d '{"symbol":"AAPL","side":"buy","quantity":5}'
+```
+
+**System Capabilities:**
+1. **Automated News Scraping** - Every 60 minutes (geopolitical + stock-specific)
+2. **Market Data Polling** - Every 60 seconds
+3. **AI Trading Decisions** - With news context and confidence scoring
+4. **Trade Execution** - Alpaca paper trading when confidence > 60%
+5. **Learning System** - Updates trade outcomes and learns from history
+6. **Real-time UI** - WebSocket updates for portfolio, orders, performance
+
+### 2026-05-17: Inter-Agent Communication System
+
+**Agents now communicate with each other and display live activity in the UI.**
+
+**New Service: `src/services/agentCommunication.ts`**
+
+- `AgentCommunicationService` class manages inter-agent messaging
+- Methods: `broadcast()`, `sendTo()`, `shareAnalysis()`, `shareRecommendation()`, `raiseWarning()`, `approveTrade()`, `rejectTrade()`, `recordDecision()`
+- `AgentMessage` interface: id, timestamp, fromAgent, toAgent, messageType, content, confidence
+- `AgentDecision` interface: symbol, agents, votes, finalDecision, consensus, timestamp
+- Message types: analysis, recommendation, question, warning, approval, rejection
+- Subscriber pattern for real-time message notifications
+
+**Bot Integration (`src/bot.ts`):**
+
+- Broadcasts market data availability from MarketDataAgent
+- Shares news intelligence analysis from NewsAgent
+- Shares AI recommendations from AIAnalyzer with confidence scores
+- RiskAgent broadcasts trade approvals/rejections
+- Raises warnings when manipulation risk is high
+
+**API Endpoint:**
+
+- `GET /api/agent/comm` - Returns recent messages, decisions, and stats
+
+**Frontend (`frontend/components/dashboard/AgentMonitor.tsx`):**
+
+- Live agent status row showing active/processing/idle states for 8 agents
+- Message feed with auto-refresh every 2 seconds
+- Message type icons: analysis (Activity), recommendation (ArrowRight), warning (AlertTriangle), approval (CheckCircle), rejection (AlertCircle)
+- Decisions view showing agent voting and consensus
+- Toggle between messages and decisions views
+
+**Agents Monitored:**
+
+- TrendAgent, VolatilityAgent, LiquidityAgent, MomentumAgent, RiskAgent, HistoricalEdgeAgent, ExecutionAgent, CEOAgent
+
 ---
 
 ## Notes for AI Agents
