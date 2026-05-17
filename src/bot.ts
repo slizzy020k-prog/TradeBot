@@ -35,7 +35,7 @@ export class TradeBot {
   }
 
   private async startNewsAutomation(): Promise<void> {
-    logger.info('Starting automated news scraping (every 60 minutes)');
+    logger.info('Starting automated news scraping (every 15 minutes)');
 
     // Run initial scrape immediately
     this.runComprehensiveNewsScrape();
@@ -43,7 +43,7 @@ export class TradeBot {
     // Then run every hour
     this.newsIntervalId = setInterval(() => {
       this.runComprehensiveNewsScrape();
-    }, 60 * 60 * 1000);
+    }, 15 * 60 * 1000); // 15 minutes
   }
 
   private async runComprehensiveNewsScrape(): Promise<void> {
@@ -189,22 +189,28 @@ export class TradeBot {
         analysis.confidence
       );
 
-      // Only execute if news intelligence doesn't block it
-      if (analysis.recommendation !== 'hold' && analysis.confidence > 60) {
-        // Additional check: if news shows high manipulation risk, reduce confidence threshold
-        const effectiveConfidence = primaryNews?.aggregatedSentiment.manipulationRisk > 50
-          ? analysis.confidence * 0.7  // Reduce confidence by 30% if manipulation risk is high
-          : analysis.confidence;
+      // Combine AI confidence with CEO trade quality score for final decision
+      const effectiveConfidence = Math.max(analysis.confidence, tradeQuality.totalScore);
+      const finalRecommendation = tradeQuality.recommendation === 'approve' ? 'buy' : tradeQuality.recommendation === 'reject' ? 'sell' : 'hold';
 
-        if (effectiveConfidence > 60) {
-          // Agent communication: Decision to trade
-          agentCommService.broadcast('RiskManager', 'approval', `Trade approved for ${primarySymbol}: ${analysis.recommendation.toUpperCase()} ${effectiveConfidence}% confidence`);
-          const rec = analysis.recommendation as 'buy' | 'sell';
-          await this.executeTrade({ ...analysis, recommendation: rec }, marketData, portfolioState);
+      // Execute if either AI or CEO recommends action with sufficient confidence
+      if (effectiveConfidence > 50 && finalRecommendation !== 'hold') {
+        // Additional check: if news shows high manipulation risk, reduce confidence threshold
+        const adjustedConfidence = primaryNews?.aggregatedSentiment.manipulationRisk > 50
+          ? effectiveConfidence * 0.7
+          : effectiveConfidence;
+
+        if (adjustedConfidence > 50) {
+          agentCommService.broadcast('RiskManager', 'approval', `Trade approved for ${primarySymbol}: ${finalRecommendation.toUpperCase()} ${adjustedConfidence}% confidence (AI: ${analysis.confidence}%, CEO: ${tradeQuality.totalScore.toFixed(0)}%)`);
+          await this.executeTrade({ ...analysis, recommendation: finalRecommendation as 'buy' | 'sell', suggestedQuantity: Math.floor(portfolioState.cash * 0.1 / marketData[0].price) }, marketData, portfolioState);
         } else {
-          agentCommService.rejectTrade('RiskManager', primarySymbol || 'UNKNOWN', `Low confidence (${effectiveConfidence}%) or high manipulation risk`);
-          logger.info(`Trade blocked due to high manipulation risk or low effective confidence`);
+          agentCommService.rejectTrade('RiskManager', primarySymbol || 'UNKNOWN', `High manipulation risk detected`);
+          logger.info(`Trade blocked due to high manipulation risk`);
         }
+      } else if (finalRecommendation === 'hold') {
+        logger.info(`Trade not executed: recommendation is HOLD (CEO: ${tradeQuality.recommendation})`);
+      } else {
+        logger.info(`Trade not executed: combined confidence ${effectiveConfidence.toFixed(0)}% below threshold (AI: ${analysis.confidence}%, CEO: ${tradeQuality.totalScore.toFixed(0)}%)`);
       }
     } catch (error) {
       logger.error('Error during tick:', error);
