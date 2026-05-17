@@ -955,3 +955,162 @@ curl -X POST "http://localhost:3001/api/bot/start" -H "Content-Type: application
 **For skills/agent changes:**
 - Test thoroughly before committing — agent behavior changes can have cascading effects
 - Document why the change improves behavior when submitting
+
+---
+
+## Trading System Specification
+
+### Core Principle: Statistical Edge Over LLM Guessing
+
+The language model layer should be responsible for exactly two things: parsing unstructured text (news, filings, social sentiment) into structured sentiment scores, and generating human-readable narrative explaining trade decisions **after** those decisions have already been made by statistical methods. Everything else — signal generation, position sizing, risk management, portfolio construction, and the learning loop — must be driven by price-derived, volume-derived, or quantifiable fundamental-derived signals that have a measurable historical edge.
+
+### Signal Generation — Real Edge Factors
+
+**Universal factors (all asset classes):**
+
+1. **Mean Reversion via Z-Score** — Price standard deviations from 20-period SMA. Z < -1.5 is long candidate, Z > +1.5 is short. Reduce weight when ADX > 30 (trending market).
+
+2. **Trend Alignment via EMA Stack** — 20/50/200 EMA alignment. Filter, not entry signal. Trades against EMA stack need higher conviction.
+
+3. **Momentum via RSI and Rate of Change** — 14-period RSI + 20-period ROC. RSI below 30 / above 70 are entry triggers. Divergence from price is powerful signal.
+
+4. **Volatility Regime via ATR Ratio** — ATR / 50-period ATR average. Below 0.7 = low volatility (mean reversion), above 1.5 = high volatility (reduce size 50%).
+
+5. **Volume Confirmation** — Relative volume (current / 20-period average). Above 1.5 confirms institutional participation.
+
+6. **MACD Histogram Crossover** — Lagging confirmation. Most reliable from extreme readings (very negative turning positive in oversold).
+
+7. **Bollinger Band Position** — %B indicator. Below 20% = long candidate, above 80% = short candidate. Three-way confluence (band extreme + RSI extreme + volume) = high conviction.
+
+8. **ADX Trend Strength** — Above 25 = trending, above 40 = strongly trending. Determines regime and factor weighting.
+
+### Regime-Aware Weighting
+
+Build a 2x2 regime matrix (trending/ranging × high/low volatility). Each cell has different factor weights:
+
+- **Trending + Low Vol:** Weight EMA stack 30%, MACD 20%, reduce mean reversion to near zero
+- **Ranging + High Vol:** Weight Bollinger Band and Z-score highly, reduce trend-following factors
+- **Breakout:** Price outside Bollinger Bands on high volume + ADX crossing 25 — enter in direction of break
+- **High Volatility:** Reduce position size by 50%, avoid initiating new positions around news events
+
+### Multi-Timeframe Confirmation
+
+- 1 timeframe only: "watch" status (track but don't trade)
+- 2 timeframes aligned: "moderate" signal
+- 3 timeframes aligned: "strong" signal
+- Only moderate and strong signals generate trade recommendations
+
+### Position Sizing — The Most Important Factor
+
+**Fixed Fractional Risk (1% per trade):**
+1. Define stop loss first (technically meaningful: below swing low for longs, above swing high for shorts, or 1.5× ATR minimum)
+2. Calculate dollar distance from entry to stop
+3. Share count = $1,000 risk budget (1% of $100K account) / stop distance
+4. Never use fixed dollar amounts — TSLA at $250 with $12.50 stop gets fewer shares than SPY at $450 with $2.25 stop
+
+**Volatility Adjustment:**
+- Current ATR > 1.5× average: reduce position 30%
+- Current ATR < 0.7× average: increase position max 25% (never exceed base)
+
+**Kelly Criterion (after 30+ trades):**
+- Kelly = (win rate × payoff ratio - loss rate) / payoff ratio
+- Always use half-Kelly (assume edge estimate is imperfect)
+
+**Portfolio-Level Hard Limits:**
+- Max 6% aggregate risk at any time
+- No single asset class > 40% of total open risk
+- Correlation above 0.7: only one position allowed unless combined risk < 1%
+- Daily drawdown > 3%: stop all automated trading for the day
+
+### The Learning System — Fixing the Feedback Loop
+
+**Pre-trade features (captured at entry):** z-score, RSI, MACD histogram direction/magnitude, ATR ratio, relative volume, EMA stack alignment score, Bollinger Band %B, ADX, hour, day of week, composite signal score
+
+**Post-trade outcomes (captured at exit):** profit/loss in R-multiples, max adverse excursion, max favorable excursion, holding period in bars, exit reason (stop/target/time/signal)
+
+**Quality Score Formula:** Quality = R-multiple achieved × (1 - max adverse excursion ratio) × win flag
+
+**Learning:** Over 50+ trades per setup, compute win rate and avg R-multiple by feature bucket. If RSI below 30 in ranging market (ADX < 25) with high volume shows 58% win rate and 1.4 avg R, but same setup in trending market shows 41% win rate and 0.8 R — the regime significantly modulates signal quality.
+
+**Minimum sample size:** 30 trades per setup bucket before computing win rate. Below that, use conservative universal parameters.
+
+### LLM Layer — Where It Adds Value
+
+**Where LLMs ARE useful:**
+- News sentiment analysis: read Fed statements, earnings calls, geopolitical news, extract context-rich sentiment scores
+- Narrative generation: explain trade decisions in plain English after statistical signals have already generated the recommendation
+
+**Where LLMs are NOT useful:**
+- Generating initial buy/sell/hold recommendation
+- Assigning confidence numbers that feed into position sizing
+- Evaluating trade quality after the fact
+- Serving as tiebreaker when signals are ambiguous
+
+### Agent System — Make Each Agent Own One Calculation
+
+- **TrendAgent:** EMA stack score + ADX (numerical, not LLM-generated)
+- **VolatilityAgent:** ATR ratio + Bollinger Band width → position size multiplier
+- **LiquidityAgent:** Relative volume + bid-ask spread → liquidity quality score, max order size; veto if score < 40
+- **MomentumAgent:** RSI + MACD + Stochastic + ROC composite score
+- **RiskAgent:** Position size calculation + portfolio risk checks (binary approved/rejected)
+- **HistoricalEdgeAgent:** Query trade database for matching setups → return measured win rate/R-multiple (or "insufficient data" flag)
+- **ExecutionAgent:** Entry timing, order type, stop/target price calculation
+- **CEOAgent:** Hard rules only — daily loss limit, max aggregate risk, correlation constraint, volatility emergency brake
+
+### Backtesting — Walk-Forward Validation
+
+- Divide data: first 18 months optimize, final 6 months test (out-of-sample)
+- Test window Sharpe < 0.8 or win rate degraded > 10% = no live trading
+- Measure: max drawdown (target < 15%), recovery time, profit factor (target > 1.5), win rate by regime, win rate by asset class, consecutive loss sequences
+- Model slippage/commissions: equities 1¢/share, crypto 0.1% maker fee + 0.5% slippage
+- Model order impact: large orders relative to ADV widen effective spread
+
+### Asset Class Specifics
+
+**Equities:** No new positions 30 min before close. Check earnings dates (next 5 days = 50% size reduction or avoid). Regular market hours only unless modeling pre/post-market.
+
+**Crypto:** 24/7 trading — handle weekend liquidity (relative volume must be > 0.8 on 4-hour for altcoins). BTC/ETH correlation is unusually high — total crypto risk limit 20% of portfolio. Thinner weekend liquidity = wider stops.
+
+**Forex:** Pip calculations differ by pair. Session overlap (London-NY 8AM-12PM EST) = highest signal reliability. Asian session = lower reliability for USD pairs.
+
+**Commodities:** Futures have expiry dates — track contract month, flag roll period (week before expiry). Supply/inventory reports (EIA, USDA, WGC) are key catalysts.
+
+**ETFs:** Check premium/discount to NAV for less liquid ETFs. Otherwise behave like equities for session hours and signal calculation.
+
+### Information Hierarchy (UI)
+
+**Tier 1 (always visible, largest text):** Portfolio value, today's P&L in $ and %, open positions count, aggregate risk as % of portfolio, system status (trading/paused/daily limit hit/market closed)
+
+**Tier 2 (main screen, no scroll):** Open positions table — symbol, direction, entry, current, unrealized P&L, risk %, time in trade. Color-coded rows (green/yellow/red). Single button to close each position.
+
+**Tier 3 (one click):** Signal detail panel (factor scores, composite score, regime, recommendation, narrative). Historical performance chart per symbol. Correlation matrix. Learning stats (win rate, avg R-multiple over time).
+
+**Tier 4 (settings/logs):** Full trade journal with post-trade analysis, agent decision logs, news feed with sentiment, backtest results, system config.
+
+### Real-Time Updates
+
+- Open position P&L: WebSocket push every 5 seconds (not polling interval)
+- Signal generation: 1 minute polling is fine (don't spam AI calls)
+- Stop loss monitoring: near-real-time price feeds for open positions only
+
+### What Does NOT Create Edge
+
+- Boardroom discussion UI (entertaining but mathematically unrelated to profitability)
+- 48 news sources when 5 would do (marginal value of additional sources is near zero)
+- Broker switching (edge comes from signal/risk system, not execution venue)
+- Sub-15-minute polling for swing trading (consumes quota without improving performance)
+
+### Implementation Priority
+
+1. Technical indicators library (pure functions: SMA, EMA, ATR, RSI, MACD, Bollinger Bands, Z-Score, ROC, Rel Volume, Stochastic, VWAP, ADX, Ichimoku)
+2. Asset classifier (equity/crypto/forex/commodity/ETF/index with asset-specific parameters)
+3. Statistical signal engine (8 factors + regime-aware weighting → typed signal object)
+4. Position sizer (fixed fractional risk + ATR adjustment + Kelly when data available)
+5. Correlation tracker (rolling 30-day returns → pair correlations → block correlated pairs)
+6. Trade feature extractor (pre-trade features JSON + post-trade outcome JSON in DB)
+7. Edge catalog (accumulate labeled trades → per-bucket win rates/R-multiples)
+8. Regime classifier (trending/ranging/breakout/high volatility at start of each cycle)
+9. Agent restructure (each agent owns one quantitative calculation, LLM generates description after)
+10. Walk-forward backtesting framework with slippage/commission/volume modeling
+11. UI update (Tier 1-4 information hierarchy)
+12. Paper trading minimum 2 weeks before live capital
