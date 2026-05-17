@@ -3,6 +3,7 @@ import { embeddingsService } from './embeddings';
 import { databaseService } from './database';
 import { newsClassifier, NewsAnalysis } from './newsClassifier';
 import { scrapingService, ScrapingResponse } from './scraping';
+import { webScraperService, ScrapedArticle } from './scraping/webScraperService';
 import { logger } from '../utils/logger';
 import { config } from '../config';
 
@@ -85,6 +86,23 @@ export class NewsIntelligenceService {
       }
 
       await this.delay(500);
+    }
+
+    // Fallback: Use web scraper if no news found
+    if (allNews.length === 0) {
+      logger.info(`Using web scraper fallback for ${symbol}`);
+      const scrapedArticles = await webScraperService.scrapeNews(symbol);
+      for (const article of scrapedArticles) {
+        const analysis = newsClassifier.analyze(
+          article.title,
+          article.content,
+          article.source || 'Web Scraping',
+          article.url
+        );
+        analysis.relevantSymbols = [symbol];
+        analysis.timestamp = Date.now();
+        allNews.push(analysis);
+      }
     }
 
     return allNews.sort((a, b) => b.timestamp - a.timestamp);
@@ -427,6 +445,40 @@ Content: ${analysis.content.substring(0, 500)}
     }
 
     return 'NEUTRAL_NEWS_SIGNAL';
+  }
+
+  async scrapeGeopoliticalNews(): Promise<NewsAnalysis[]> {
+    logger.info('Starting geopolitical news scraping...');
+    const articles = await webScraperService.scrapeGeopoliticalNews();
+    const allNews: NewsAnalysis[] = [];
+
+    for (const article of articles) {
+      const analysis = newsClassifier.analyze(
+        article.title,
+        article.content,
+        article.source || 'Geopolitical News',
+        article.url
+      );
+      analysis.timestamp = Date.now();
+      allNews.push(analysis);
+      await this.delay(200);
+    }
+
+    logger.info(`Collected ${allNews.length} geopolitical news articles`);
+    return allNews;
+  }
+
+  async scrapeAllNews(symbols: string[]): Promise<Map<string, NewsIntelligenceResult>> {
+    logger.info('Starting comprehensive news scraping for all symbols...');
+
+    // Scrape geopolitical news first
+    const geoNews = await this.scrapeGeopoliticalNews();
+
+    // Then scrape symbol-specific news
+    const results = await this.getNewsForSymbols(symbols);
+
+    logger.info(`Completed comprehensive news scraping for ${symbols.length} symbols`);
+    return results;
   }
 
   private delay(ms: number): Promise<void> {

@@ -120,6 +120,72 @@ class ApiClient {
       body: JSON.stringify({ content, source }),
     });
   }
+
+  // Analytics
+  async getPerformanceMetrics(days = 30) {
+    return this.fetch(`/api/analytics/performance?days=${days}`);
+  }
+
+  async getSymbolAnalytics(symbol: string, days = 30) {
+    return this.fetch(`/api/analytics/symbol/${symbol}?days=${days}`);
+  }
+
+  async getAgentAnalytics() {
+    return this.fetch('/api/analytics/agents');
+  }
+
+  // Portfolio
+  async getPortfolioOptimize(symbols: string[], method: 'mean_variance' | 'risk_parity' = 'risk_parity') {
+    return this.fetch(`/api/portfolio/optimize?symbols=${symbols.join(',')}&method=${method}`);
+  }
+
+  // Reports
+  async getPerformanceReport(period: '1w' | '1m' | '3m' = '1m') {
+    return this.fetch(`/api/reports/performance?period=${period}`);
+  }
+
+  async getDailySummary() {
+    return this.fetch('/api/reports/daily');
+  }
+
+  // ML Predictions
+  async getPrediction(symbol: string) {
+    return this.fetch(`/api/predict/${symbol}`);
+  }
+
+  async getTopPredictions(limit = 10) {
+    return this.fetch(`/api/predict/top?limit=${limit}`);
+  }
+
+  // Trading 212
+  async getT212Portfolio() {
+    return this.fetch('/api/t212/portfolio');
+  }
+
+  async getT212Positions() {
+    return this.fetch('/api/t212/positions');
+  }
+
+  async getT212Orders() {
+    return this.fetch('/api/t212/orders');
+  }
+
+  async getT212Quote(ticker: string) {
+    return this.fetch(`/api/t212/quote/${ticker}`);
+  }
+
+  async submitT212Order(ticker: string, side: 'buy' | 'sell', quantity: number, orderType?: 'market' | 'limit', limitPrice?: number) {
+    return this.fetch('/api/t212/order', {
+      method: 'POST',
+      body: JSON.stringify({ ticker, side, quantity, orderType, limitPrice }),
+    });
+  }
+
+  async cancelT212Order(orderId: string) {
+    return this.fetch(`/api/t212/order/${orderId}`, {
+      method: 'DELETE',
+    });
+  }
 }
 
 export const api = new ApiClient();

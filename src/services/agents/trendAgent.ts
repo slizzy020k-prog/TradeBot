@@ -1,5 +1,6 @@
 import { MarketData, Trade } from '../../types';
 import { logger } from '../../utils/logger';
+import { marketDataService } from '../marketData';
 
 export interface TrendAnalysisResult {
   score: number;
@@ -9,9 +10,53 @@ export interface TrendAnalysisResult {
   exhaustionIndicators: string[];
   continuationProbability: number;
   details: string;
+  timeframeConfirmations?: { [key: string]: boolean };
 }
 
 export class TrendAgent {
+  async analyzeWithMultiTimeframe(marketData: MarketData, symbol: string): Promise<TrendAnalysisResult> {
+    const timeframes = ['5m', '15m', '1h', '4h', '1d'];
+    const historicalDataMap: { [key: string]: MarketData[] } = {};
+
+    for (const tf of timeframes) {
+      try {
+        const data = await marketDataService.getHistorical(symbol, tf as any, '5d');
+        historicalDataMap[tf] = data;
+      } catch (error) {
+        logger.warn(`Failed to fetch ${tf} data for ${symbol}`);
+        historicalDataMap[tf] = [];
+      }
+    }
+
+    const primaryResult = this.analyze(marketData, historicalDataMap['1h']);
+
+    const timeframeConfirmations: { [key: string]: boolean } = {};
+    let confirmations = 0;
+
+    for (const tf of timeframes) {
+      const tfData = historicalDataMap[tf];
+      if (tfData && tfData.length >= 5) {
+        const tfTrend = this.analyze(marketData, tfData);
+        const aligned = tfTrend.directionalBias === primaryResult.directionalBias;
+        timeframeConfirmations[tf] = aligned && tfTrend.score >= 55;
+        if (timeframeConfirmations[tf]) confirmations++;
+      } else {
+        timeframeConfirmations[tf] = false;
+      }
+    }
+
+    const multiTimeframeBonus = confirmations >= 3 ? 15 : confirmations >= 2 ? 8 : 0;
+    const adjustedScore = Math.min(100, primaryResult.score + multiTimeframeBonus);
+
+    return {
+      ...primaryResult,
+      score: adjustedScore,
+      multiTimeframeAlignment: (confirmations / timeframes.length) * 100,
+      details: primaryResult.details + ` | Multi-timeframe: ${confirmations}/${timeframes.length} aligned`,
+      timeframeConfirmations,
+    };
+  }
+
   analyze(marketData: MarketData, historicalData?: MarketData[]): TrendAnalysisResult {
     const priceChange = this.calculatePriceChange(marketData);
     const volumeStrength = this.evaluateVolumeStrength(marketData);

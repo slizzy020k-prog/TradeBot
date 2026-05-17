@@ -6,12 +6,29 @@ import { config } from '../config';
 export class TradingExecutorService {
   private baseUrl = 'https://paper-api.alpaca.markets';
   private headers: Record<string, string>;
+  private slippageRate: number;
+  private fillDelayMs: { min: number; max: number };
+  private simulationMode: boolean;
 
   constructor() {
     this.headers = {
       'APCA-API-KEY-ID': config.alpacaApiKey,
       'APCA-API-SECRET-KEY': config.alpacaSecretKey,
     };
+    this.slippageRate = config.slippageRate || 0.0005;
+    this.fillDelayMs = { min: 100, max: 500 };
+    this.simulationMode = config.tradingMode === 'paper';
+  }
+
+  applySlippage(price: number, side: 'buy' | 'sell'): number {
+    const slippageMultiplier = 1 + (Math.random() - 0.5) * 2 * this.slippageRate;
+    return price * slippageMultiplier;
+  }
+
+  async simulateFillDelay(): Promise<void> {
+    if (!this.simulationMode) return;
+    const delay = this.fillDelayMs.min + Math.random() * (this.fillDelayMs.max - this.fillDelayMs.min);
+    await new Promise(resolve => setTimeout(resolve, delay));
   }
 
   async getAccount(): Promise<{ cash: number; portfolio_value: number }> {
@@ -90,10 +107,13 @@ export class TradingExecutorService {
     }
   }
 
-  async getOrderStatus(orderId: string): Promise<string> {
+  async getOrderStatus(orderId: string): Promise<any> {
     try {
-      const response = await axios.get(`${this.baseUrl}/v2/orders/${orderId}`, { headers: this.headers });
-      return response.data.status;
+      const url = orderId === 'all'
+        ? `${this.baseUrl}/v2/orders?status=all`
+        : `${this.baseUrl}/v2/orders/${orderId}`;
+      const response = await axios.get(url, { headers: this.headers });
+      return response.data;
     } catch (error) {
       logger.error(`Failed to get order status for ${orderId}:`, error);
       throw error;

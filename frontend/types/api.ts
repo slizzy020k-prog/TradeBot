@@ -24,6 +24,8 @@ export interface Trade {
   price: number;
   timestamp: number;
   status: 'pending' | 'filled' | 'cancelled' | 'rejected';
+  profitLoss?: number;
+  qualityScore?: number;
 }
 
 export interface AIAnalysisResponse {

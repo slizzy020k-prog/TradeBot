@@ -217,6 +217,43 @@ export class TwitterSentimentAgent {
     return Math.min(100, risk);
   }
 
+  calculateSignalQuality(text: string, followerCount?: number): number {
+    let quality = 35;
+
+    const qualityIndicators = [
+      { text: 'analysis', weight: 10 },
+      { text: 'technical', weight: 8 },
+      { text: 'chart', weight: 5 },
+      { text: 'earnings', weight: 10 },
+      { text: 'fundamentals', weight: 12 },
+      { text: 'DD', weight: 8 },
+      { text: 'due diligence', weight: 10 },
+    ];
+
+    const lower = text.toLowerCase();
+    for (const indicator of qualityIndicators) {
+      if (lower.includes(indicator.text)) {
+        quality += indicator.weight;
+      }
+    }
+
+    if (text.includes('reply') && text.includes('thread')) quality += 10;
+    if (text.length > 200) quality += 5;
+    if (text.length > 500) quality += 5;
+
+    const manipRisk = this.calculateSocialManipulationRisk(text);
+    if (manipRisk < 30) quality += 10;
+    else if (manipRisk > 60) quality -= 15;
+
+    if (followerCount) {
+      if (followerCount > 100000) quality += 15;
+      else if (followerCount > 10000) quality += 10;
+      else if (followerCount > 1000) quality += 5;
+    }
+
+    return Math.min(90, Math.max(15, quality));
+  }
+
   async getTrendingTickers(): Promise<string[]> {
     return this.trendingTickers;
   }

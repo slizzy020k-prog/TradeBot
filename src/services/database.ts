@@ -144,6 +144,14 @@ export class DatabaseService {
       CREATE INDEX IF NOT EXISTS idx_news_classification ON news_articles(classification);
       CREATE INDEX IF NOT EXISTS idx_sentiment_source ON sentiment_data(source);
       CREATE INDEX IF NOT EXISTS idx_sentiment_timestamp ON sentiment_data(timestamp);
+
+      CREATE TABLE IF NOT EXISTS backtest_results (
+        id TEXT PRIMARY KEY,
+        name TEXT,
+        config TEXT,
+        result TEXT,
+        created_at INTEGER
+      );
     `);
     logger.info('Database initialized');
   }
@@ -328,6 +336,10 @@ export class DatabaseService {
 
   close(): void {
     this.db.close();
+  }
+
+  getDb(): Database.Database {
+    return this.db;
   }
 }
 

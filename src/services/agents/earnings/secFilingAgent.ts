@@ -79,6 +79,12 @@ export class SECFilingAgent {
               analysis.scores.durationScore = Math.min(100, analysis.scores.durationScore + 20);
             }
 
+            // Pre-announcement detection for earnings
+            const preAnnouncementScore = this.detectPreAnnouncementScore(item);
+            if (preAnnouncementScore > 60) {
+              analysis.keyThemes.push(`pre-announcement: ${preAnnouncementScore}% confidence`);
+            }
+
             analyses.push(analysis);
           }
         }
@@ -189,6 +195,35 @@ export class SECFilingAgent {
     }
 
     return items;
+  }
+
+  private detectPreAnnouncementScore(item: { headline: string; content: string; formType: string }): number {
+    let score = 30; // Base score
+
+    // 8-K filings near earnings season are often pre-announcements
+    if (item.formType === '8-K') {
+      score += 25;
+    }
+
+    // Keywords indicating pre-earnings activity
+    const preAnnouncementKeywords = [
+      'earnings', 'revenue guidance', 'updated outlook', 'pre-announcement',
+      'pre-release', 'results', 'quarterly', 'fiscal'
+    ];
+
+    const lowerContent = (item.headline + ' ' + item.content).toLowerCase();
+    for (const keyword of preAnnouncementKeywords) {
+      if (lowerContent.includes(keyword)) {
+        score += 15;
+      }
+    }
+
+    // Form 4 filings (insider trading) are strong pre-announcement signals
+    if (item.formType === '4') {
+      score += 30;
+    }
+
+    return Math.min(95, score);
   }
 }
 

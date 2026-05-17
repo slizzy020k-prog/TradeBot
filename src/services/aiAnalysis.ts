@@ -28,7 +28,7 @@ export class AIAnalysisService {
 
     try {
       const response = await axios.post(
-        'https://api.minimaxi.com/v1/chat/completions',
+        'https://api.minimaxi.chat/v1/chat/completions',
         {
           model: 'MiniMax-M2.7',
           messages: [

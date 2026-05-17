@@ -13,6 +13,7 @@ interface OptionFlow {
   sentiment: 'bullish' | 'bearish' | 'neutral';
   unusual: boolean;
   estimatedMarketImpact: number;
+  signalQuality: number;
 }
 
 export class OptionsFlowSentimentAgent {
@@ -117,10 +118,11 @@ export class OptionsFlowSentimentAgent {
           strike: this.extractStrike(response.content, i),
           premium,
           volume,
-         OI: this.extractOI(response.content, i),
+          OI: this.extractOI(response.content, i),
           sentiment,
           unusual: volume > 5000,
-          estimatedMarketImpact: this.estimateMarketImpact(volume, premium)
+          estimatedMarketImpact: this.estimateMarketImpact(volume, premium),
+          signalQuality: this.calculateSignalQuality(volume, premium, this.extractOI(response.content, i))
         });
       }
     } catch (error) {
@@ -157,10 +159,11 @@ export class OptionsFlowSentimentAgent {
             strike: strike || 0,
             premium: premium || 0,
             volume,
-           OI: this.extractValue(row, /oi[:\s]*(\d+)/i) || 0,
+            OI: this.extractValue(row, /oi[:\s]*(\d+)/i) || 0,
             sentiment,
             unusual: true,
-            estimatedMarketImpact: this.estimateMarketImpact(volume, premium)
+            estimatedMarketImpact: this.estimateMarketImpact(volume, premium),
+            signalQuality: this.calculateSignalQuality(volume, premium, this.extractValue(row, /oi[:\s]*(\d+)/i) || 0)
           });
         }
       }
@@ -320,6 +323,28 @@ export class OptionsFlowSentimentAgent {
     if (flow.expiration.includes('0') || flow.expiration.includes('1')) risk += 10;
 
     return Math.min(90, risk);
+  }
+
+  private calculateSignalQuality(volume: number, premium: number, oi: number): number {
+    let quality = 40;
+
+    // Volume-based quality
+    if (volume > 10000) quality += 20;
+    else if (volume > 5000) quality += 15;
+    else if (volume > 1000) quality += 5;
+
+    // Premium-based quality (large trades = higher conviction)
+    if (premium > 500000) quality += 20;
+    else if (premium > 100000) quality += 10;
+
+    // OI-based quality (open interest shows institutional positioning)
+    if (oi > 50000) quality += 15;
+    else if (oi > 10000) quality += 10;
+
+    // High unusual activity boosts quality
+    if (volume > 5000 && premium > 100000) quality += 10;
+
+    return Math.min(95, quality);
   }
 
   private extractThemes(flow: OptionFlow): string[] {

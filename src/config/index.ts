@@ -9,10 +9,12 @@ export interface Config {
   aiProvider: 'anthropic' | 'minimax';
   alpacaApiKey: string;
   alpacaSecretKey: string;
+  trading212ApiKey: string;
   tradingMode: 'paper' | 'live';
   pollIntervalMs: number;
   maxPositionSize: number;
   maxDailyLoss: number;
+  slippageRate: number;
   dataDir: string;
   qdrantHost: string;
   qdrantPort: number;
@@ -27,10 +29,12 @@ export function loadConfig(): Config {
     aiProvider: (process.env.AI_PROVIDER as 'anthropic' | 'minimax') || 'minimax',
     alpacaApiKey: process.env.ALPACA_API_KEY || '',
     alpacaSecretKey: process.env.ALPACA_SECRET_KEY || '',
+    trading212ApiKey: process.env.TRADING212_API_KEY || '',
     tradingMode: (process.env.TRADING_MODE as 'paper' | 'live') || 'paper',
     pollIntervalMs: parseInt(process.env.POLL_INTERVAL_MS || '60000', 10) || 60000,
     maxPositionSize: parseFloat(process.env.MAX_POSITION_SIZE || '1000') || 1000,
     maxDailyLoss: parseFloat(process.env.MAX_DAILY_LOSS || '200') || 200,
+    slippageRate: parseFloat(process.env.SLIPPAGE_RATE || '0.0005') || 0.0005,
     dataDir: process.env.DATA_DIR || path.join(process.cwd(), 'data'),
     qdrantHost: process.env.QDRANT_HOST || 'localhost',
     qdrantPort: parseInt(process.env.QDRANT_PORT || '6333', 10) || 6333,
