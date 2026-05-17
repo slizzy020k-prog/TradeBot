@@ -33,6 +33,14 @@ export interface MarketData {
   low?: number;
   open?: number;
   close?: number;
+  dividendRate?: number;
+  dividendYield?: number;
+  trailingAnnualDividendYield?: number;
+  fiftyTwoWeekHigh?: number;
+  fiftyTwoWeekLow?: number;
+  marketCap?: number;
+  peRatio?: number;
+  eps?: number;
 }
 
 export interface Trade {

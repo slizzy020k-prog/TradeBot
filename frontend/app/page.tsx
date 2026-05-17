@@ -17,7 +17,11 @@ import { SectionHeader } from '@/components/ui';
 import { Activity, Zap, TrendingUp, Shield } from 'lucide-react';
 
 export default function Dashboard() {
-  const [watchedSymbols] = useState<string[]>(['AAPL', 'TSLA', 'BTC-USD', 'NVDA', 'MSFT']);
+  const [watchedSymbols] = useState<string[]>([
+    'AAPL', 'MSFT', 'NVDA', 'GOOGL', 'AMZN', 'META', 'TSLA', 'BRK-B', 'JPM', 'V',
+    'JNJ', 'PG', 'KO', 'PEP', 'VZ', 'T', 'XOM', 'CVX', 'COP', 'SLB',
+    'BTC-USD', 'ETH-USD', 'SOL-USD'
+  ]);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {

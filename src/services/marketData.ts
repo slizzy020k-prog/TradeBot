@@ -39,6 +39,14 @@ export class MarketDataService {
         low: quote?.low?.[quote?.low?.length - 1],
         open: quote?.open?.[quote?.open?.length - 1],
         close: quote?.close?.[quote?.close?.length - 1],
+        dividendRate: meta.dividendRate,
+        dividendYield: meta.dividendYield,
+        trailingAnnualDividendYield: meta.trailingAnnualDividendYield,
+        fiftyTwoWeekHigh: meta.fiftyTwoWeekHigh,
+        fiftyTwoWeekLow: meta.fiftyTwoWeekLow,
+        marketCap: meta.marketCap,
+        peRatio: meta.trailingPE,
+        eps: meta.epsTrailingTwelveMonths,
       };
 
       this.cache.set(symbol, { data: marketData, timestamp: Date.now() });
