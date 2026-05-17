@@ -40,10 +40,31 @@ export class TradeBot {
     // Run initial scrape immediately
     this.runComprehensiveNewsScrape();
 
-    // Then run every hour
+    // Run both news and market data scraping every 15 minutes
     this.newsIntervalId = setInterval(() => {
       this.runComprehensiveNewsScrape();
+      this.runYahooFinanceScrape();
     }, 15 * 60 * 1000); // 15 minutes
+  }
+
+  private async runYahooFinanceScrape(): Promise<void> {
+    logger.info('=== YAHOO FINANCE SCRAPE STARTED ===');
+
+    try {
+      // Scrape detailed data for all watched symbols
+      for (const symbol of this.watchedSymbols) {
+        try {
+          const data = await marketDataService.getQuote(symbol);
+          logger.info(`Yahoo Finance ${symbol}: $${data.price} (vol: ${data.volume})`);
+          await new Promise(r => setTimeout(r, 500)); // Rate limit protection
+        } catch (error) {
+          logger.error(`Failed to scrape ${symbol}:`, error);
+        }
+      }
+      logger.info(`=== YAHOO FINANCE SCRAPE COMPLETE: ${this.watchedSymbols.length} symbols ===`);
+    } catch (error) {
+      logger.error('Error during Yahoo Finance scrape:', error);
+    }
   }
 
   private async runComprehensiveNewsScrape(): Promise<void> {
