@@ -16,6 +16,7 @@ import {
   ceoAgent,
 } from './agents';
 import { PERSONA_CONFIG } from '../config/persona';
+import { agentCommService } from './agentCommunication';
 
 export class EnhancedTradeEvaluator {
   async evaluate(
@@ -63,6 +64,10 @@ export class EnhancedTradeEvaluator {
     const ceoAssessment = ceoAgent.assess(ceoInput);
     const qualityScore = ceoAgent.computeTradeQualityScore(subAgentResults, ceoAssessment);
 
+    // CEO broadcasts final decision
+    const rec = qualityScore.recommendation === 'approve' ? 'buy' : qualityScore.recommendation === 'reject' ? 'sell' : 'hold';
+    agentCommService.shareRecommendation('CEOAgent', marketData.symbol, rec, qualityScore.totalScore, qualityScore.classification);
+
     logger.info(`Trade Quality Score: ${qualityScore.totalScore.toFixed(1)} (${qualityScore.classification})`);
     logger.info(`CEO Recommendation: ${qualityScore.recommendation.toUpperCase()}`);
 
@@ -77,13 +82,34 @@ export class EnhancedTradeEvaluator {
     recentTrades?: Trade[],
     proposedTrade?: { side: 'buy' | 'sell'; quantity: number; stopLoss?: number; takeProfit?: number }
   ): SubAgentResult {
+    // Each agent broadcasts its analysis as it completes
+    agentCommService.shareAnalysis('TrendAgent', md.symbol, `score: ${trendAgent.analyze(md, historical).score}`, 0);
     const trendResult = trendAgent.analyze(md, historical);
+    agentCommService.shareAnalysis('TrendAgent', md.symbol, `bullish bias: ${trendResult.directionalBias}, strength: ${trendResult.score.toFixed(0)}`, trendResult.score);
+
+    agentCommService.shareAnalysis('VolatilityAgent', md.symbol, `analyzing volatility...`, 0);
     const volatilityResult = volatilityAgent.analyze(md, historical);
+    agentCommService.shareAnalysis('VolatilityAgent', md.symbol, `ATR regime: ${volatilityResult.regime}, score: ${volatilityResult.score}`, volatilityResult.score);
+
+    agentCommService.shareAnalysis('LiquidityAgent', md.symbol, `analyzing liquidity...`, 0);
     const liquidityResult = liquidityAgent.analyze(md);
+    agentCommService.shareAnalysis('LiquidityAgent', md.symbol, `spread: ${liquidityResult.spreadQuality}, score: ${liquidityResult.score}`, liquidityResult.score);
+
+    agentCommService.shareAnalysis('MomentumAgent', md.symbol, `analyzing momentum...`, 0);
     const momentumResult = momentumAgent.analyze(md, historical);
+    agentCommService.shareAnalysis('MomentumAgent', md.symbol, `RSI: ${momentumResult.rsi}, MACD: ${momentumResult.macdSignal}, score: ${momentumResult.score}`, momentumResult.score);
+
+    agentCommService.shareAnalysis('RiskAgent', md.symbol, `validating position size...`, 0);
     const riskResult = riskAgent.analyze(md, portfolio, proposedTrade);
+    agentCommService.shareAnalysis('RiskAgent', md.symbol, `risk score: ${riskResult.score}, passed: ${riskResult.passedHardLimits}`, riskResult.score);
+
+    agentCommService.shareAnalysis('HistoricalEdgeAgent', md.symbol, `searching patterns...`, 0);
     const historicalEdgeResult = historicalEdgeAgent.analyze(md, regime, recentTrades);
+    agentCommService.shareAnalysis('HistoricalEdgeAgent', md.symbol, `pattern matches: ${historicalEdgeResult.patternMatchCount}, score: ${historicalEdgeResult.score}`, historicalEdgeResult.score);
+
+    agentCommService.shareAnalysis('ExecutionAgent', md.symbol, `analyzing execution quality...`, 0);
     const executionResult = executionAgent.analyze(md);
+    agentCommService.shareAnalysis('ExecutionAgent', md.symbol, `score: ${executionResult.score}`, executionResult.score);
 
     const regimeCompatibility = this.calculateRegimeCompatibility(regime, trendResult, momentumResult, md, historical);
 

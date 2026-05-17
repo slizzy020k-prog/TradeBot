@@ -9,6 +9,7 @@ import { userInfoProcessorService } from './services/userInfoProcessor';
 import { AIAnalysisRequest } from './types';
 import { newsIntelligenceService } from './services/newsIntelligence';
 import { agentCommService } from './services/agentCommunication';
+import { enhancedTradeEvaluator } from './services/enhancedTradeEvaluator';
 
 export class TradeBot {
   private running = false;
@@ -148,6 +149,20 @@ export class TradeBot {
         memoryContext,
         newsContext: Object.fromEntries(newsContextForSymbols),
       };
+
+      // Run multi-agent evaluation BEFORE AI analysis - agents communicate their findings
+      agentCommService.broadcast('System', 'analysis', `Starting multi-agent evaluation for ${marketData[0]?.symbol}...`);
+      const regime = enhancedTradeEvaluator.classifyRegime(marketData[0]);
+      const tradeQuality = await enhancedTradeEvaluator.evaluate(
+        marketData[0],
+        portfolioState,
+        regime,
+        undefined,
+        recentTrades as any[],
+        { side: 'buy', quantity: 10 }
+      );
+      const ceoRec = tradeQuality.recommendation === 'approve' ? 'buy' : tradeQuality.recommendation === 'reject' ? 'sell' : 'hold';
+      agentCommService.shareRecommendation('CEOAgent', marketData[0]?.symbol || 'UNKNOWN', ceoRec, tradeQuality.totalScore, tradeQuality.classification);
 
       const analysis = await aiAnalysisService.analyze(analysisRequest);
       logger.info(`AI Recommendation: ${analysis.recommendation} (confidence: ${analysis.confidence}%)`);
