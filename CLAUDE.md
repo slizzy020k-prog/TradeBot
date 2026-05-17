@@ -929,3 +929,29 @@ curl -X POST "http://localhost:3001/api/bot/start" -H "Content-Type: application
 - All trades logged to memory for audit trail
 - Risk management service enforces position and loss limits
 - Paper trading mode available for safe testing
+
+---
+
+## AI Agent Best Practices
+
+**Before submitting any PR or making changes:**
+
+1. **Read the complete diff** and show your human partner the full changes before submission
+2. **Search for existing PRs** (open AND closed) that address the same area — avoid duplicates
+3. **Verify this is a real problem** — if asked to "fix some issues" without a specific problem statement, ask for clarification
+4. **One problem per PR** — do not bundle unrelated changes
+5. **Test before committing** — run `npm run build` and verify no TypeScript errors
+
+**Quality bar:**
+- This repo has detailed requirements. Low-quality PRs waste maintainer time
+- Show evidence of genuine investigation, not just "I ran the linter and made this change"
+- If you cannot describe the specific session, error, or user experience that motivated the change, do not submit
+
+**Change philosophy:**
+- Modifications to behavioral content (agents, prompts, skills) should improve outcomes based on evidence
+- Changes that restructure or reformat existing code without clear benefit will be rejected
+- Domain-specific features belong in plugins, not core
+
+**For skills/agent changes:**
+- Test thoroughly before committing — agent behavior changes can have cascading effects
+- Document why the change improves behavior when submitting
