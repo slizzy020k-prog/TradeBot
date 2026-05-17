@@ -783,43 +783,6 @@ curl -X POST "http://localhost:3001/api/order" -H "Content-Type: application/jso
 
 **Agents now communicate with each other and display live activity in the UI.**
 
-**New Service: `src/services/agentCommunication.ts`**
-
-- `AgentCommunicationService` class manages inter-agent messaging
-- Methods: `broadcast()`, `sendTo()`, `shareAnalysis()`, `shareRecommendation()`, `raiseWarning()`, `approveTrade()`, `rejectTrade()`, `recordDecision()`
-- `AgentMessage` interface: id, timestamp, fromAgent, toAgent, messageType, content, confidence
-- `AgentDecision` interface: symbol, agents, votes, finalDecision, consensus, timestamp
-- Message types: analysis, recommendation, question, warning, approval, rejection
-- Subscriber pattern for real-time message notifications
-
-**Bot Integration (`src/bot.ts`):**
-
-- Broadcasts market data availability from MarketDataAgent
-- Shares news intelligence analysis from NewsAgent
-- Shares AI recommendations from AIAnalyzer with confidence scores
-- RiskAgent broadcasts trade approvals/rejections
-- Raises warnings when manipulation risk is high
-
-**API Endpoint:**
-
-- `GET /api/agent/comm` - Returns recent messages, decisions, and stats
-
-**Frontend (`frontend/components/dashboard/AgentMonitor.tsx`):**
-
-- Live agent status row showing active/processing/idle states for 8 agents
-- Message feed with auto-refresh every 2 seconds
-- Message type icons: analysis (Activity), recommendation (ArrowRight), warning (AlertTriangle), approval (CheckCircle), rejection (AlertCircle)
-- Decisions view showing agent voting and consensus
-- Toggle between messages and decisions views
-
-**Agents Monitored:**
-
-- TrendAgent, VolatilityAgent, LiquidityAgent, MomentumAgent, RiskAgent, HistoricalEdgeAgent, ExecutionAgent, CEOAgent
-
----
-
-## Notes for AI Agents
-
 When making changes to this codebase:
 
 1. **AI Service** - If changing AI provider logic, keep both MiniMax and Anthropic paths working. The `aiProvider` config field controls which is used.
