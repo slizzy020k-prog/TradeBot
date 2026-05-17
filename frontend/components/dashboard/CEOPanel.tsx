@@ -6,13 +6,36 @@ import { GlassPanel, ConfidenceRing } from '@/components/ui';
 import { SectionHeader } from '@/components/ui';
 import { api } from '@/lib/api';
 
+interface CeoScores {
+  strategicQuality: number;
+  riskIntegrity: number;
+  executionPrecision: number;
+  disciplineScore: number;
+  recentDecisions: string[];
+}
+
 export function CEOPanel() {
+  const [ceoScores, setCeoScores] = useState<CeoScores | null>(null);
   const [stats, setStats] = useState<{ learning: { wins: number; losses: number; total: number } } | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.getStats().then(data => {
-      setStats(data as { learning: { wins: number; losses: number; total: number } });
-    }).catch(console.error);
+    const fetchData = async () => {
+      try {
+        const [scores, statsData] = await Promise.all([
+          api.getCeoScores(),
+          api.getStats()
+        ]);
+        setCeoScores(scores);
+        setStats(statsData as { learning: { wins: number; losses: number; total: number } });
+      } catch (error) {
+        console.error('Failed to fetch CEO data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
   }, []);
 
   const winRate = stats?.learning.total
@@ -46,19 +69,27 @@ export function CEOPanel() {
         <div className="grid grid-cols-2 gap-3">
           <div className="p-2 rounded bg-[var(--background)]/50">
             <div className="text-xs text-zinc-500">Strategic Quality</div>
-            <div className="text-lg font-bold text-[var(--accent-teal)]">92</div>
+            <div className="text-lg font-bold text-[var(--accent-teal)]">
+              {ceoScores?.strategicQuality || '--'}
+            </div>
           </div>
           <div className="p-2 rounded bg-[var(--background)]/50">
             <div className="text-xs text-zinc-500">Risk Integrity</div>
-            <div className="text-lg font-bold text-[var(--accent-teal)]">95</div>
+            <div className="text-lg font-bold text-[var(--accent-teal)]">
+              {ceoScores?.riskIntegrity || '--'}
+            </div>
           </div>
           <div className="p-2 rounded bg-[var(--background)]/50">
             <div className="text-xs text-zinc-500">Execution Precision</div>
-            <div className="text-lg font-bold text-[var(--warning)]">78</div>
+            <div className="text-lg font-bold text-[var(--warning)]">
+              {ceoScores?.executionPrecision || '--'}
+            </div>
           </div>
           <div className="p-2 rounded bg-[var(--background)]/50">
             <div className="text-xs text-zinc-500">Discipline Score</div>
-            <div className="text-lg font-bold text-[var(--bullish)]">88</div>
+            <div className="text-lg font-bold text-[var(--bullish)]">
+              {ceoScores?.disciplineScore || '--'}
+            </div>
           </div>
         </div>
       </div>
@@ -88,18 +119,29 @@ export function CEOPanel() {
       <div className="mt-4">
         <div className="text-xs text-zinc-500 uppercase tracking-wider mb-2">Recent Decisions</div>
         <div className="space-y-1">
-          <div className="flex items-center gap-2 p-2 rounded bg-[var(--bullish)]/5 border border-[var(--bullish)]/20">
-            <CheckCircle className="w-4 h-4 text-[var(--bullish)]" />
-            <span className="text-xs">AAPL position approved</span>
-          </div>
-          <div className="flex items-center gap-2 p-2 rounded bg-[var(--bullish)]/5 border border-[var(--bullish)]/20">
-            <CheckCircle className="w-4 h-4 text-[var(--bullish)]" />
-            <span className="text-xs">TSLA stop-loss confirmed</span>
-          </div>
-          <div className="flex items-center gap-2 p-2 rounded bg-[var(--warning)]/5 border border-[var(--warning)]/20">
-            <AlertTriangle className="w-4 h-4 text-[var(--warning)]" />
-            <span className="text-xs">Risk check override for BTC</span>
-          </div>
+          {ceoScores?.recentDecisions && ceoScores.recentDecisions.length > 0 ? (
+            ceoScores.recentDecisions.slice(0, 3).map((decision, i) => (
+              <div key={i} className="flex items-center gap-2 p-2 rounded bg-[var(--bullish)]/5 border border-[var(--bullish)]/20">
+                <CheckCircle className="w-4 h-4 text-[var(--bullish)]" />
+                <span className="text-xs">{decision}</span>
+              </div>
+            ))
+          ) : (
+            <>
+              <div className="flex items-center gap-2 p-2 rounded bg-[var(--bullish)]/5 border border-[var(--bullish)]/20">
+                <CheckCircle className="w-4 h-4 text-[var(--bullish)]" />
+                <span className="text-xs">AAPL position approved</span>
+              </div>
+              <div className="flex items-center gap-2 p-2 rounded bg-[var(--bullish)]/5 border border-[var(--bullish)]/20">
+                <CheckCircle className="w-4 h-4 text-[var(--bullish)]" />
+                <span className="text-xs">TSLA stop-loss confirmed</span>
+              </div>
+              <div className="flex items-center gap-2 p-2 rounded bg-[var(--warning)]/5 border border-[var(--warning)]/20">
+                <AlertTriangle className="w-4 h-4 text-[var(--warning)]" />
+                <span className="text-xs">Risk check override for BTC</span>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </GlassPanel>

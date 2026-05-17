@@ -4,7 +4,7 @@ import { logger } from '../utils/logger';
 import { config } from '../config';
 
 export class TradingExecutorService {
-  private baseUrl = 'https://paper-api.alpaca.markets';
+  private baseUrl = config.alpacaBaseUrl;
   private headers: Record<string, string>;
   private slippageRate: number;
   private fillDelayMs: { min: number; max: number };
@@ -44,7 +44,7 @@ export class TradingExecutorService {
     }
   }
 
-  async getPositions(): Promise<Array<{ symbol: string; qty: string; market_value: string }>> {
+  async getPositions(): Promise<Array<{ symbol: string; qty: string; market_value: string; avg_entry_price: string }>> {
     try {
       const response = await axios.get(`${this.baseUrl}/v2/positions`, { headers: this.headers });
       return response.data;

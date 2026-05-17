@@ -9,6 +9,7 @@ export interface Config {
   aiProvider: 'anthropic' | 'minimax';
   alpacaApiKey: string;
   alpacaSecretKey: string;
+  alpacaBaseUrl: string;
   trading212ApiKey: string;
   tradingMode: 'paper' | 'live';
   pollIntervalMs: number;
@@ -29,6 +30,7 @@ export function loadConfig(): Config {
     aiProvider: (process.env.AI_PROVIDER as 'anthropic' | 'minimax') || 'minimax',
     alpacaApiKey: process.env.ALPACA_API_KEY || '',
     alpacaSecretKey: process.env.ALPACA_SECRET_KEY || '',
+    alpacaBaseUrl: process.env.ALPACA_BASE_URL || 'https://paper-api.alpaca.markets',
     trading212ApiKey: process.env.TRADING212_API_KEY || '',
     tradingMode: (process.env.TRADING_MODE as 'paper' | 'live') || 'paper',
     pollIntervalMs: parseInt(process.env.POLL_INTERVAL_MS || '60000', 10) || 60000,

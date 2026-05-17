@@ -807,6 +807,119 @@ When making changes to this codebase:
 
 9. **Qdrant** - Requires local Qdrant service running on `QDRANT_HOST:QDRANT_PORT`. Vector store is optional but enables semantic trade similarity search.
 
+### 2026-05-17: Frontend-Backend Full Functionality Audit
+**CRITICAL: Removed all mock/static data from frontend dashboard.**
+
+**Backend API Server (`src/api-server.ts`):**
+- Added 8 new API endpoints:
+  - `GET /api/positions` - Positions with unrealized P&L and weight
+  - `DELETE /api/order/:id` - Cancel order
+  - `GET /api/ceo/scores` - CEO quality scores from memory
+  - `GET /api/learning/stats` - Learning metrics (patterns learned, win/loss)
+  - `GET /api/risk/daily` - Real daily P&L calculation
+  - `GET /api/market/indices` - Global indices (SPY, QQQ, VIX, BTC, etc.)
+  - `GET /api/market/fear-greed` - Fear & Greed calculation from VIX
+  - `GET /api/market/sectors` - Sector performance from ETF data
+- Added 5 new WebSocket events: `regime:change`, `learning:update`, `ceo:decision`, `agent:message`, `allocation:update`
+- Fixed `portfolioOptimizer` hardcoded $10000 value - now uses real portfolio value
+- Fixed `allocationEngine.updateCurrentWeights()` no-op - now calculates real weights
+- Fixed `tradingExecutor.getPositions()` to return `avg_entry_price`
+- Made `marketScannerService.inferAssetClass()` public for allocation engine
+
+**Frontend API Client (`frontend/lib/api.ts`):**
+- Added 8 new methods: `getPositions()`, `cancelOrder()`, `getCeoScores()`, `getLearningStats()`, `getDailyPnL()`, `getMarketIndices()`, `getFearGreed()`, `getMarketSectors()`
+
+**Frontend WebSocket (`frontend/lib/websocket.ts`):**
+- Added 5 new hooks: `useRegimeUpdates()`, `useLearningUpdates()`, `useCeoDecisions()`, `useAgentMessages()`, `useAllocationUpdates()`
+
+**Frontend Component Fixes:**
+- `MarketOverview.tsx` - Real data from `/api/market/indices`, `/api/market/sectors`, `/api/market/fear-greed`
+- `CEOPanel.tsx` - Real CEO scores from `/api/ceo/scores`
+- `LearningModule.tsx` - Real stats from `/api/learning/stats` + performance data from `/api/analytics/performance`
+- `OrderFlow.tsx` - Real bid/ask imbalance and liquidity zones from `/api/positions`
+
+**Build Verification:**
+- Backend `npm run build`: PASS
+- Frontend `npm run build`: PASS
+
+### 2026-05-17: Autonomous Agent Trading System
+**Event-driven, continuously running AI agent boardroom.**
+
+**New Services:**
+1. **MarketEventService** (`src/services/marketEventService.ts`)
+   - Watches key symbols (SPY, QQQ, BTC-USD, ETH-USD, etc.)
+   - Emits `price:change` events when price changes >0.1%
+   - Configurable watch interval (default 5 seconds)
+
+2. **Enhanced MarketScanner** (`src/services/marketScanner.ts`)
+   - Now extends EventEmitter
+   - Emits `scan:complete` event after each market scan
+
+3. **SharedStateService** (`src/services/sharedState.ts`)
+   - Centralized market/portfolio snapshots
+   - EventBus for pub/sub agent communication
+   - `getAggregatedRecommendation()` combines agent contexts
+
+4. **AutonomousAnalysisEngine** (`src/services/autonomousAnalysisEngine.ts`)
+   - 10-second analysis cycles with 5-second minimum interval
+   - Price change detection (>0.5% threshold) for immediate analysis
+   - `runBoardroomDiscussion()` - Generates AI agent dialogue
+   - Continuous autonomous operation 24/7
+
+**SSE Streaming Endpoints:**
+- `GET /api/stream/market` - Real-time market indices (every 2 seconds)
+- `GET /api/stream/portfolio` - Real-time portfolio updates (every 3 seconds)
+- `GET /api/stream/agents` - Real-time agent communications (every 5 seconds)
+
+**Agent Boardroom:**
+- `GET /api/boardroom/history` - View past boardroom discussions
+- `POST /api/boardroom/discuss` - Manually trigger new discussion
+- Auto-generates boardroom discussion every 60 seconds when bot is running
+- 5 AI agents using MiniMax-M2.7 model:
+  - MarketScanner (Market Intelligence Officer) - orange
+  - TrendAgent (Technical Analysis Specialist) - blue
+  - RiskAgent (Chief Risk Officer) - red
+  - NewsAgent (Head of News Intelligence) - green
+  - CEOAgent (Chief Executive Officer) - gold
+
+**AI Fallback System:**
+- Agents NEVER remain in HOLD without reason
+- Sentiment analysis converts HOLD to BUY/SELL based on keyword detection
+- Portfolio-based fallback: cash position analysis triggers actionable signals
+- Time-based varied signals when no market data available
+- All signals include contextual reasoning
+
+**Frontend SSE Hooks** (`frontend/lib/websocket.ts`):
+- `useMarketStream(onUpdate)` - Subscribe to real-time market data
+- `usePortfolioStream(onUpdate)` - Subscribe to real-time portfolio
+- `useAgentStream(onUpdate)` - Subscribe to agent communications
+- `useBoardroomMessages(onMessage)` - Subscribe to boardroom dialogue via WebSocket
+
+**Boardroom Discussion UI** (`frontend/components/dashboard/BoardroomDiscussion.tsx`):
+- Real-time agent messages with distinct colors per agent
+- Filter by agent, confidence slider
+- Expandable message cards with reasoning
+- Stats bar showing buy/sell/hold signal counts
+
+**How It Works:**
+1. Bot starts → boardroom discussions auto-start (every 60s)
+2. Each agent (MarketScanner, TrendAgent, RiskAgent, NewsAgent, CEOAgent) generates AI commentary using MiniMax-M2.7
+3. All dialogue is broadcast via WebSocket `boardroom:message` event
+4. Frontend subscribes to SSE endpoints for real-time streaming data
+5. Market scanner emits events triggering analysis cycles
+
+**Running the System:**
+```bash
+# Terminal 1 - Backend API
+npm run api
+
+# Terminal 2 - Frontend
+cd frontend && npm run dev
+
+# Start bot (triggers boardroom auto-start)
+curl -X POST "http://localhost:3001/api/bot/start" -H "Content-Type: application/json" -d '{}'
+```
+
 ---
 
 ## Security Considerations

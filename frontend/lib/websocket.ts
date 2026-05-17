@@ -175,3 +175,155 @@ export function useBotStatus(onStatus: (status: unknown) => void) {
     return unsub;
   }, []);
 }
+
+// === NEW EVENT SUBSCRIPTIONS FOR FRONTEND DATA INTEGRITY ===
+
+// Hook for regime changes
+export function useRegimeUpdates(onRegime: (data: { regime: string; timestamp: number }) => void) {
+  const callbackRef = useRef(onRegime);
+  callbackRef.current = onRegime;
+
+  useEffect(() => {
+    const handler = (data: unknown) => {
+      callbackRef.current(data as { regime: string; timestamp: number });
+    };
+
+    const unsub = wsManager.on('regime:change', handler);
+    return unsub;
+  }, []);
+}
+
+// Hook for learning updates
+export function useLearningUpdates(onLearning: (data: unknown) => void) {
+  const callbackRef = useRef(onLearning);
+  callbackRef.current = onLearning;
+
+  useEffect(() => {
+    const handler = (data: unknown) => {
+      callbackRef.current(data);
+    };
+
+    const unsub = wsManager.on('learning:update', handler);
+    return unsub;
+  }, []);
+}
+
+// Hook for CEO decisions
+export function useCeoDecisions(onDecision: (data: unknown) => void) {
+  const callbackRef = useRef(onDecision);
+  callbackRef.current = onDecision;
+
+  useEffect(() => {
+    const handler = (data: unknown) => {
+      callbackRef.current(data);
+    };
+
+    const unsub = wsManager.on('ceo:decision', handler);
+    return unsub;
+  }, []);
+}
+
+// Hook for agent messages
+export function useAgentMessages(onMessage: (data: unknown) => void) {
+  const callbackRef = useRef(onMessage);
+  callbackRef.current = onMessage;
+
+  useEffect(() => {
+    const handler = (data: unknown) => {
+      callbackRef.current(data);
+    };
+
+    const unsub = wsManager.on('agent:message', handler);
+    return unsub;
+  }, []);
+}
+
+// Hook for allocation updates
+export function useAllocationUpdates(onAllocation: (data: unknown) => void) {
+  const callbackRef = useRef(onAllocation);
+  callbackRef.current = onAllocation;
+
+  useEffect(() => {
+    const handler = (data: unknown) => {
+      callbackRef.current(data);
+    };
+
+    const unsub = wsManager.on('allocation:update', handler);
+    return unsub;
+  }, []);
+}
+
+// === SSE STREAMING HOOKS ===
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
+export function useMarketStream(onUpdate: (data: unknown) => void) {
+  useEffect(() => {
+    const eventSource = new EventSource(`${API_BASE}/api/stream/market`);
+
+    eventSource.onmessage = (event) => {
+      try {
+        const parsed = JSON.parse(event.data);
+        onUpdate(parsed);
+      } catch {}
+    };
+
+    eventSource.onerror = () => {
+      eventSource.close();
+    };
+
+    return () => eventSource.close();
+  }, []);
+}
+
+export function usePortfolioStream(onUpdate: (data: unknown) => void) {
+  useEffect(() => {
+    const eventSource = new EventSource(`${API_BASE}/api/stream/portfolio`);
+
+    eventSource.onmessage = (event) => {
+      try {
+        const parsed = JSON.parse(event.data);
+        onUpdate(parsed);
+      } catch {}
+    };
+
+    eventSource.onerror = () => {
+      eventSource.close();
+    };
+
+    return () => eventSource.close();
+  }, []);
+}
+
+export function useAgentStream(onUpdate: (data: unknown) => void) {
+  useEffect(() => {
+    const eventSource = new EventSource(`${API_BASE}/api/stream/agents`);
+
+    eventSource.onmessage = (event) => {
+      try {
+        const parsed = JSON.parse(event.data);
+        onUpdate(parsed);
+      } catch {}
+    };
+
+    eventSource.onerror = () => {
+      eventSource.close();
+    };
+
+    return () => eventSource.close();
+  }, []);
+}
+
+export function useBoardroomMessages(onMessage: (data: unknown) => void) {
+  const callbackRef = useRef(onMessage);
+  callbackRef.current = onMessage;
+
+  useEffect(() => {
+    const handler = (data: unknown) => {
+      callbackRef.current(data);
+    };
+
+    const unsub = wsManager.on('boardroom:message', handler);
+    return unsub;
+  }, []);
+}

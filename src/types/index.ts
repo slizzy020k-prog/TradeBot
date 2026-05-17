@@ -121,3 +121,90 @@ export interface AIAnalysisResponse {
 }
 
 export type TradingMode = 'paper' | 'live';
+
+// ============================================================
+// MULTI-ASSET TRADING TYPES
+// ============================================================
+
+export type AssetClass = 'equities' | 'crypto' | 'forex' | 'commodities' | 'etfs' | 'bonds';
+
+export type MacroRegime =
+  | 'risk_on_bull'
+  | 'risk_on_bear'
+  | 'risk_off'
+  | 'inflation'
+  | 'deflation'
+  | 'high_volatility'
+  | 'low_volatility'
+  | 'stagflation'
+  | 'recovery'
+  | 'normal';
+
+export interface UniverseSymbol {
+  symbol: string;
+  assetClass: AssetClass;
+  enabled: boolean;
+  priority: number;
+  weight?: number;
+}
+
+export interface MarketDataExtended extends MarketData {
+  assetClass: AssetClass;
+  quoteCurrency: string;
+  baseCurrency?: string;
+  contractSize?: number;
+  exchange?: string;
+}
+
+export interface OpportunityScore {
+  symbol: string;
+  assetClass: AssetClass;
+  totalScore: number;
+  breakdown: {
+    trendScore: number;
+    momentumScore: number;
+    valueScore: number;
+    qualityScore: number;
+    regimeScore: number;
+    liquidityScore: number;
+  };
+  rank: number;
+  globalRank: number;
+  recommendation: 'buy' | 'sell' | 'hold';
+  confidence: number;
+  timestamp: number;
+}
+
+export interface CorrelationEntry {
+  symbol1: string;
+  symbol2: string;
+  correlation: number;
+  strength: 'strong_positive' | 'moderate_positive' | 'weak' | 'moderate_negative' | 'strong_negative';
+  lookbackDays: number;
+  updatedAt: number;
+}
+
+export interface AllocationTarget {
+  assetClass: AssetClass;
+  currentWeight: number;
+  targetWeight: number;
+  minWeight: number;
+  maxWeight: number;
+  enabled: boolean;
+}
+
+export interface PortfolioAllocation {
+  totalValue: number;
+  cash: number;
+  allocations: AllocationTarget[];
+  regime: MacroRegime;
+  concentrationRisk: number;
+  updatedAt: number;
+}
+
+export interface MultiAssetContext {
+  topOpportunities: OpportunityScore[];
+  currentAllocation: PortfolioAllocation;
+  regime: MacroRegime;
+  concentrationRisk: number;
+}

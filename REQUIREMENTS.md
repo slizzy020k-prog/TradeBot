@@ -175,18 +175,47 @@ npm run cli stats
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                    Next.js Frontend                         │
-│  (localhost:3000) - 10 dashboard modules                    │
+│  (localhost:3000) - 14 dashboard modules                     │
 └──────────────────────────────┬──────────────────────────────┘
-                               │ WebSocket + REST
+                               │ WebSocket + REST + SSE
                                │ (localhost:3001)
 ┌──────────────────────────────▼──────────────────────────────┐
 │                    API Server Layer                          │
 │  Express + Socket.io - Bridges frontend to TradeBot services│
+│  - REST endpoints for market/portfolio/orders/stats        │
+│  - WebSocket for real-time boardroom messages              │
+│  - SSE streams for market/portfolio/agent data             │
 └──────────────────────────────┬──────────────────────────────┘
                                │
 ┌──────────────────────────────▼──────────────────────────────┐
 │                    TradeBot Backend                         │
 │  marketDataService, tradingExecutorService, aiAnalysis     │
 │  memoryService, riskManagementService, newsIntelligence   │
+│  autonomousAnalysisEngine - 24/7 continuous operation     │
+│  sharedState + EventBus - Centralized agent communication  │
 └─────────────────────────────────────────────────────────────┘
 ```
+
+---
+
+### Key Features
+
+1. **Autonomous 24/7 Operation**
+   - Continuous analysis cycles every 10 seconds
+   - Price change detection triggers immediate analysis
+   - No human intervention required
+
+2. **Agent Boardroom**
+   - 5 AI agents generating live commentary
+   - Color-coded messages (MarketScanner=orange, TrendAgent=blue, etc.)
+   - Never outputs generic HOLD — all signals have reasoning
+
+3. **AI Fallback System**
+   - Sentiment analysis converts HOLD to actionable signals
+   - Portfolio-based fallback when AI returns generic responses
+   - Time-based signal variation for engagement
+
+4. **Real-Time Dashboard**
+   - BoardroomDiscussion panel with live agent dialogue
+   - Agent filtering and confidence slider
+   - WebSocket + SSE for instant updates

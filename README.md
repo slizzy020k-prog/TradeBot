@@ -287,7 +287,33 @@ The **AgentMonitor** dashboard panel displays all these messages in real-time wi
 - **Data:** Yahoo Finance, Google News RSS
 - **Trading:** Alpaca Paper Trading API
 - **Database:** SQLite + Qdrant vector store
-- **Agents:** 8 sub-agents + CEO oversight
+- **Agents:** 8 sub-agents + CEO oversight + 5 boardroom agents
+
+---
+
+## Autonomous Agent Boardroom
+
+The system features a **live boardroom discussion** where 5 AI agents continuously communicate:
+
+| Agent | Color | Role |
+|-------|-------|------|
+| MarketScanner | Orange | Market Intelligence Officer |
+| TrendAgent | Blue | Technical Analysis Specialist |
+| RiskAgent | Red | Chief Risk Officer |
+| NewsAgent | Green | Head of News Intelligence |
+| CEOAgent | Gold | Chief Executive Officer |
+
+**Key Features:**
+- Agents NEVER output generic HOLD — all signals have contextual reasoning
+- Sentiment analysis converts HOLD to BUY/SELL based on keyword detection
+- Portfolio-based fallback when AI returns generic responses
+- Time-based signal variation for continuous market engagement
+- Boardroom auto-generates every 60 seconds when bot is running
+
+**View Boardroom:**
+1. Open `http://localhost:3000` in browser
+2. Scroll to "Boardroom Discussion" panel (bottom center)
+3. Watch live agent dialogue with color-coded messages
 
 ---
 
@@ -314,6 +340,10 @@ TradeBot/
 │   │   │   └── ceoAgent.ts
 │   │   ├── agentCommunication.ts  # Inter-agent messaging
 │   │   ├── aiAnalysis.ts           # AI integration with RAG
+│   │   ├── autonomousAnalysisEngine.ts # 24/7 autonomous analysis
+│   │   ├── sharedState.ts          # Shared state + EventBus
+│   │   ├── marketEventService.ts   # Price change detection
+│   │   ├── marketScanner.ts       # Enhanced scanner with events
 │   │   ├── marketData.ts          # Yahoo Finance data
 │   │   ├── tradingExecutor.ts     # Alpaca API
 │   │   ├── newsIntelligence.ts    # Google News scraping
@@ -328,6 +358,7 @@ TradeBot/
 │   └── components/
 │       └── dashboard/
 │           ├── AgentMonitor.tsx   # Live agent feed
+│           ├── BoardroomDiscussion.tsx # Live agent boardroom
 │           ├── MarketOverview.tsx
 │           ├── TradeIntelligence.tsx
 │           ├── PortfolioPanel.tsx

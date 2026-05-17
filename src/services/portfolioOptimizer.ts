@@ -22,7 +22,8 @@ export class PortfolioOptimizer {
   async optimize(
     symbols: string[],
     currentWeights: Map<string, number>,
-    method: 'mean_variance' | 'risk_parity' = 'risk_parity'
+    method: 'mean_variance' | 'risk_parity' = 'risk_parity',
+    portfolioValue?: number
   ): Promise<OptimizationResult> {
     logger.info(`Optimizing portfolio for ${symbols.join(', ')} using ${method}`);
 
@@ -48,7 +49,7 @@ export class PortfolioOptimizer {
     const portfolioVolatility = this.calculatePortfolioVolatility(optimalWeights, covarianceMatrix);
     const sharpeRatio = portfolioVolatility > 0 ? portfolioReturn / portfolioVolatility : 0;
 
-    const totalValue = 10000;
+    const totalValue = portfolioValue || 10000;
     const allocations = symbols.map((symbol, i) => ({
       symbol,
       weight: Math.round(optimalWeights[i] * 10000) / 100,

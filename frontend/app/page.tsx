@@ -13,6 +13,7 @@ import { CEOPanel } from '@/components/dashboard/CEOPanel';
 import { OrderFlow } from '@/components/dashboard/OrderFlow';
 import { LearningModule } from '@/components/dashboard/LearningModule';
 import { PerformanceMetrics } from '@/components/dashboard/PerformanceMetrics';
+import { BoardroomDiscussion } from '@/components/dashboard/BoardroomDiscussion';
 import { SectionHeader } from '@/components/ui';
 import { Activity, Zap, TrendingUp, Shield } from 'lucide-react';
 
@@ -76,6 +77,19 @@ export default function Dashboard() {
           {/* Risk Command Center - spans 4 columns */}
           <div className="col-span-4">
             <RiskCommandCenter />
+          </div>
+        </div>
+
+        {/* Boardroom Row: Agent Discussion + Trade Journal */}
+        <div className={`grid grid-cols-12 gap-4 mb-4 ${mounted ? 'animate-fade-in' : 'opacity-0'}`} style={{ animationDelay: '250ms' }}>
+          {/* Boardroom Discussion - spans 6 columns */}
+          <div className="col-span-6">
+            <BoardroomDiscussion />
+          </div>
+
+          {/* Trade Journal - spans 6 columns */}
+          <div className="col-span-6">
+            <TradeJournal />
           </div>
         </div>
 

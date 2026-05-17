@@ -186,6 +186,86 @@ class ApiClient {
       method: 'DELETE',
     });
   }
+
+  // === NEW ENDPOINTS FOR FRONTEND DATA INTEGRITY ===
+
+  // Positions with unrealized P&L
+  async getPositions(): Promise<Array<{
+    symbol: string;
+    quantity: number;
+    marketValue: number;
+    avgEntryPrice: number;
+    currentPrice: number;
+    unrealizedPnL: number;
+    weight: number;
+  }>> {
+    return this.fetch('/api/positions');
+  }
+
+  // Cancel order
+  async cancelOrder(orderId: string): Promise<{ status: string; orderId: string }> {
+    return this.fetch(`/api/order/${orderId}`, { method: 'DELETE' });
+  }
+
+  // CEO quality scores
+  async getCeoScores(): Promise<{
+    strategicQuality: number;
+    riskIntegrity: number;
+    executionPrecision: number;
+    disciplineScore: number;
+    recentDecisions: string[];
+  }> {
+    return this.fetch('/api/ceo/scores');
+  }
+
+  // Learning stats
+  async getLearningStats(): Promise<{
+    patternsLearned: number;
+    avgResponseMs: number;
+    wins: number;
+    losses: number;
+    total: number;
+    winRate: number;
+  }> {
+    return this.fetch('/api/learning/stats');
+  }
+
+  // Daily P&L
+  async getDailyPnL(): Promise<{ dailyPnL: number; calculatedAt: number; positions: number }> {
+    return this.fetch('/api/risk/daily');
+  }
+
+  // Market indices (SPY, QQQ, VIX, BTC, etc.)
+  async getMarketIndices(): Promise<MarketData[]> {
+    return this.fetch('/api/market/indices');
+  }
+
+  // Fear & Greed index
+  async getFearGreed(): Promise<{ value: number; label: string; vix: number }> {
+    return this.fetch('/api/market/fear-greed');
+  }
+
+  // Sector performance
+  async getMarketSectors(): Promise<Array<{ name: string; change: number }>> {
+    return this.fetch('/api/market/sectors');
+  }
+
+  // === BOARDROOM / AGENT CONVERSATION METHODS ===
+
+  // Get boardroom history
+  async getBoardroomHistory(limit = 50): Promise<Array<{
+    agent: string;
+    role: string;
+    content: string;
+    timestamp: number;
+  }>> {
+    return this.fetch(`/api/boardroom/history?limit=${limit}`);
+  }
+
+  // Trigger boardroom discussion
+  async triggerBoardroomDiscussion(): Promise<{ status: string; messages: number }> {
+    return this.fetch('/api/boardroom/discuss', { method: 'POST' });
+  }
 }
 
 export const api = new ApiClient();

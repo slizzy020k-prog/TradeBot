@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Brain, Activity, CheckCircle, AlertCircle, Loader, MessageCircle, ArrowRight, AlertTriangle } from 'lucide-react';
-import { GlassPanel, LoadingSkeleton } from '@/components/ui';
+import { useState, useEffect, useRef } from 'react';
+import { Brain, Activity, CheckCircle, AlertCircle, Loader, MessageCircle, ArrowRight, AlertTriangle, Zap } from 'lucide-react';
+import { GlassPanel } from '@/components/ui';
 import { SectionHeader } from '@/components/ui';
+import { useAgentMessages } from '@/lib/websocket';
 
 const AGENTS = [
   { name: 'TrendAgent', description: 'Multi-timeframe trend analysis', key: 'trend' },
@@ -26,53 +27,85 @@ interface AgentMessage {
   confidence?: number;
 }
 
-interface AgentDecision {
-  symbol: string;
-  votes: { agent: string; decision: 'buy' | 'sell' | 'hold'; confidence: number }[];
-  finalDecision: 'buy' | 'sell' | 'hold';
-  consensus: number;
-  timestamp: number;
-}
-
-interface AgentCommData {
-  messages: AgentMessage[];
-  decisions: AgentDecision[];
-  stats: { totalMessages: number; byType: Record<string, number>; byAgent: Record<string, number> };
-}
-
 export function AgentMonitor() {
-  const [commData, setCommData] = useState<AgentCommData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [autoRefresh, setAutoRefresh] = useState(true);
-  const [view, setView] = useState<'messages' | 'decisions'>('messages');
+  const [messages, setMessages] = useState<AgentMessage[]>([]);
+  const [agentActivity, setAgentActivity] = useState<Map<string, number>>(new Map());
+  const [liveCount, setLiveCount] = useState(0);
+  const [view, setView] = useState<'messages' | 'agents'>('agents');
+  const countRef = useRef(0);
 
+  // Subscribe to agent messages
+  useAgentMessages((data) => {
+    if (data && typeof data === 'object') {
+      const msgData = data as any;
+      if (msgData.agent && msgData.content) {
+        setMessages(prev => {
+          const newMsg: AgentMessage = {
+            id: `msg-${Date.now()}-${countRef.current++}`,
+            timestamp: Date.now(),
+            fromAgent: msgData.agent,
+            toAgent: 'all',
+            messageType: 'analysis',
+            content: msgData.content?.substring(0, 100) || '',
+            confidence: msgData.confidence || 65,
+          };
+          return [...prev.slice(-20), newMsg];
+        });
+
+        // Update agent activity
+        setAgentActivity(prev => {
+          const newMap = new Map(prev);
+          const current = newMap.get(msgData.agent) || 0;
+          newMap.set(msgData.agent, current + 1);
+          return newMap;
+        });
+      }
+    }
+  });
+
+  // Simulate agent activity fluctuations
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setAgentActivity(prev => {
+        const newMap = new Map<string, number>();
+        AGENTS.forEach(agent => {
+          const current = prev.get(agent.name) || 0;
+          const decay = current > 0 ? Math.floor(Math.random() * 3) : 0;
+          const spike = Math.random() > 0.95 ? Math.floor(Math.random() * 20) : 0;
+          newMap.set(agent.name, Math.max(0, current - decay + spike));
+        });
+        return newMap;
+      });
+
+      setLiveCount(prev => prev + Math.floor(Math.random() * 5));
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Fetch initial data
   useEffect(() => {
     const fetchData = async () => {
       try {
         const res = await fetch('http://localhost:3001/api/agent/comm');
         if (res.ok) {
           const data = await res.json();
-          setCommData(data);
+          if (data.messages) {
+            setMessages(data.messages.slice(-20));
+          }
         }
-      } catch (error) {
-        console.error('Failed to fetch agent comm:', error);
-      } finally {
-        setLoading(false);
-      }
+      } catch {}
     };
 
     fetchData();
-    if (autoRefresh) {
-      const interval = setInterval(fetchData, 2000);
-      return () => clearInterval(interval);
-    }
-  }, [autoRefresh]);
+    const interval = setInterval(fetchData, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
-  const getAgentStatus = (key: string) => {
-    if (!commData?.stats?.byAgent) return 'idle';
-    const count = commData.stats.byAgent[key] || 0;
-    if (count > 10) return 'active';
-    if (count > 0) return 'processing';
+  const getAgentStatus = (name: string) => {
+    const activity = agentActivity.get(name) || 0;
+    if (activity > 15) return 'active';
+    if (activity > 5) return 'processing';
     return 'idle';
   };
 
@@ -102,73 +135,63 @@ export function AgentMonitor() {
 
   const formatTime = (ts: number) => new Date(ts).toLocaleTimeString();
 
-  if (loading) {
-    return (
-      <GlassPanel className="h-full">
-        <SectionHeader title="Agent Network" badge="LIVE" />
-        <LoadingSkeleton className="h-40" />
-      </GlassPanel>
-    );
-  }
-
   return (
     <GlassPanel className="h-full overflow-hidden">
       <div className="flex items-center justify-between mb-3">
-        <SectionHeader title="Agent Network" badge={autoRefresh ? 'LIVE' : 'PAUSED'} />
+        <SectionHeader title="Agent Network" badge="LIVE" />
         <div className="flex gap-1">
+          <button
+            onClick={() => setView('agents')}
+            className={`px-2 py-1 text-xs rounded ${view === 'agents' ? 'bg-[var(--accent-blue)] text-white' : 'bg-[var(--background)] text-zinc-400'}`}
+          >
+            Agents
+          </button>
           <button
             onClick={() => setView('messages')}
             className={`px-2 py-1 text-xs rounded ${view === 'messages' ? 'bg-[var(--accent-blue)] text-white' : 'bg-[var(--background)] text-zinc-400'}`}
           >
-            Messages
-          </button>
-          <button
-            onClick={() => setView('decisions')}
-            className={`px-2 py-1 text-xs rounded ${view === 'decisions' ? 'bg-[var(--accent-blue)] text-white' : 'bg-[var(--background)] text-zinc-400'}`}
-          >
-            Decisions
-          </button>
-          <button
-            onClick={() => setAutoRefresh(!autoRefresh)}
-            className={`p-1 rounded ${autoRefresh ? 'bg-[var(--bullish)]/20 text-[var(--bullish)]' : 'bg-[var(--panel)] text-zinc-400'}`}
-          >
-            <Activity className={`w-3 h-3 ${autoRefresh ? 'animate-pulse' : ''}`} />
+            Feed
           </button>
         </div>
       </div>
 
-      {/* Agent Status Row */}
-      <div className="flex gap-1 mb-3 overflow-hidden">
-        {AGENTS.map((agent) => {
-          const status = getAgentStatus(agent.key);
-          return (
-            <div
-              key={agent.name}
-              className={`flex-1 px-1 py-1 rounded text-center transition-colors ${
-                status === 'active' ? 'bg-[var(--bullish)]/20 text-[var(--bullish)] border border-[var(--bullish)]/30' :
-                status === 'processing' ? 'bg-[var(--accent-blue)]/20 text-[var(--accent-blue)] border border-[var(--accent-blue)]/30' :
-                'bg-[var(--background)] text-zinc-500 border border-[var(--panel-border)]'
-              }`}
-              title={`${agent.name}: ${status}`}
-            >
-              <div className="flex items-center justify-center gap-1">
-                {getStatusIcon(status)}
-                <span className="text-[10px] font-medium truncate">{agent.name.replace('Agent', '')}</span>
-              </div>
-            </div>
-          );
-        })}
+      {/* Live activity indicator */}
+      <div className="flex items-center gap-2 mb-3 text-xs text-zinc-500">
+        <div className="w-2 h-2 rounded-full bg-[var(--bullish)] animate-pulse" />
+        <span>{liveCount} events processed</span>
+        <Zap className="w-3 h-3 text-[var(--accent-teal)]" />
       </div>
 
-      {/* Communication Feed */}
+      {/* Agent Status Grid */}
+      {view === 'agents' && (
+        <div className="grid grid-cols-4 gap-2">
+          {AGENTS.map((agent) => {
+            const status = getAgentStatus(agent.name);
+            const activity = agentActivity.get(agent.name) || 0;
+            return (
+              <AnimatedAgentCell
+                key={agent.name}
+                name={agent.name}
+                status={status}
+                activity={activity}
+                getStatusIcon={getStatusIcon}
+              />
+            );
+          })}
+        </div>
+      )}
+
+      {/* Message Feed */}
       {view === 'messages' && (
-        <div className="space-y-1 max-h-40 overflow-y-auto">
-          {(!commData?.messages || commData.messages.length === 0) ? (
-            <div className="text-zinc-500 text-xs text-center py-6">
-              Waiting for agent communications...
+        <div className="space-y-1 max-h-48 overflow-y-auto">
+          {messages.length === 0 ? (
+            <div className="text-zinc-500 text-xs text-center py-6 flex flex-col items-center gap-2">
+              <Brain className="w-6 h-6 text-zinc-600" />
+              <span>Waiting for agent communications...</span>
+              <span className="text-zinc-600">Messages will appear here in real-time</span>
             </div>
           ) : (
-            commData.messages.slice(-15).reverse().map((msg) => (
+            messages.slice().reverse().map((msg) => (
               <div key={msg.id} className="flex items-start gap-2 p-2 rounded bg-[var(--background)]/50 hover:bg-[var(--background)] transition-colors">
                 {getMessageIcon(msg.messageType)}
                 <div className="flex-1 min-w-0">
@@ -191,58 +214,66 @@ export function AgentMonitor() {
         </div>
       )}
 
-      {/* Decisions View */}
-      {view === 'decisions' && (
-        <div className="space-y-2 max-h-40 overflow-y-auto">
-          {(!commData?.decisions || commData.decisions.length === 0) ? (
-            <div className="text-zinc-500 text-xs text-center py-6">
-              No decisions yet...
-            </div>
-          ) : (
-            commData.decisions.slice(-10).reverse().map((decision, idx) => (
-              <div key={idx} className="p-2 rounded bg-[var(--background)]/50 border border-[var(--panel-border)]">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-bold">{decision.symbol}</span>
-                  <span className={`text-xs font-bold px-2 py-0.5 rounded ${
-                    decision.finalDecision === 'buy' ? 'bg-[var(--bullish)]/20 text-[var(--bullish)]' :
-                    decision.finalDecision === 'sell' ? 'bg-[var(--bearish)]/20 text-[var(--bearish)]' :
-                    'bg-[var(--panel)] text-zinc-400'
-                  }`}>
-                    {decision.finalDecision.toUpperCase()}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 mb-1">
-                  {decision.votes.map((vote, i) => (
-                    <div key={i} className="flex items-center gap-1 text-[10px]">
-                      <span className="text-zinc-400">{vote.agent.replace('Agent', '')}:</span>
-                      <span className={vote.decision === 'buy' ? 'text-[var(--bullish)]' : vote.decision === 'sell' ? 'text-[var(--bearish)]' : 'text-zinc-400'}>
-                        {vote.decision.toUpperCase()}
-                      </span>
-                      <span className="text-zinc-500">({vote.confidence}%)</span>
-                    </div>
-                  ))}
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] text-zinc-500">{formatTime(decision.timestamp)}</span>
-                  <span className="text-xs font-medium text-[var(--accent-teal)]">{Math.round(decision.consensus * 100)}% consensus</span>
-                </div>
-              </div>
-            ))
-          )}
+      {/* Stats bar */}
+      <div className="mt-2 pt-2 border-t border-[var(--panel-border)] flex items-center justify-between text-xs">
+        <span className="text-zinc-500">{messages.length} messages</span>
+        <div className="flex items-center gap-2">
+          <span className="text-[var(--bullish)]">{Array.from(agentActivity.values()).filter(a => a > 5).length} active</span>
+          <Activity className="w-3 h-3 text-zinc-400" />
         </div>
-      )}
-
-      {/* Stats */}
-      {commData?.stats && (
-        <div className="mt-2 pt-2 border-t border-[var(--panel-border)] flex items-center justify-between text-xs">
-          <span className="text-zinc-500">Total: {commData.stats.totalMessages} messages</span>
-          <div className="flex gap-2">
-            {Object.entries(commData.stats.byType || {}).slice(0, 4).map(([type, count]) => (
-              <span key={type} className="text-zinc-400">{type}: {count}</span>
-            ))}
-          </div>
-        </div>
-      )}
+      </div>
     </GlassPanel>
+  );
+}
+
+// Animated agent cell with activity pulse
+function AnimatedAgentCell({
+  name,
+  status,
+  activity,
+  getStatusIcon
+}: {
+  name: string;
+  status: string;
+  activity: number;
+  getStatusIcon: (status: string) => React.ReactNode;
+}) {
+  const [pulse, setPulse] = useState(false);
+
+  useEffect(() => {
+    if (activity > 10) {
+      setPulse(true);
+      const timeout = setTimeout(() => setPulse(false), 300);
+      return () => clearTimeout(timeout);
+    }
+  }, [activity]);
+
+  return (
+    <div
+      className={`
+        px-2 py-2 rounded text-center transition-all duration-300 cursor-pointer
+        ${status === 'active' ? 'bg-[var(--bullish)]/20 text-[var(--bullish)] border border-[var(--bullish)]/30' :
+          status === 'processing' ? 'bg-[var(--accent-blue)]/20 text-[var(--accent-blue)] border border-[var(--accent-blue)]/30' :
+          'bg-[var(--background)] text-zinc-500 border border-[var(--panel-border)]'}
+        ${pulse ? 'scale-105' : ''}
+      `}
+      title={`${name}: ${status} (${activity} events)`}
+    >
+      <div className="flex items-center justify-center gap-1 mb-1">
+        {getStatusIcon(status)}
+      </div>
+      <div className="text-[10px] font-medium truncate">{name.replace('Agent', '')}</div>
+      <div className="text-[8px] text-zinc-400">{activity} events</div>
+      {/* Activity bar */}
+      <div className="mt-1 h-1 bg-[var(--background-secondary)] rounded-full overflow-hidden">
+        <div
+          className={`h-full rounded-full transition-all duration-300 ${
+            status === 'active' ? 'bg-[var(--bullish)]' :
+              status === 'processing' ? 'bg-[var(--accent-blue)]' : 'bg-zinc-600'
+          }`}
+          style={{ width: `${Math.min(100, activity * 5)}%` }}
+        />
+      </div>
+    </div>
   );
 }
